@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/*
+!data/.gitkeep
+eval/clips/
+.pytest_cache/
+.ruff_cache/

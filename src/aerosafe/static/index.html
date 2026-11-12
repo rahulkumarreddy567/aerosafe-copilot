@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#192f52">
+  <title>AeroSafe | Triage console</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#triage" aria-label="AeroSafe home">
+        <span class="brand-mark" aria-hidden="true"><span>A</span><i></i></span>
+        <span><strong>AeroSafe</strong><small>Maintenance · Safety AI</small></span>
+      </a>
+      <nav class="main-nav" aria-label="Console views">
+        <a href="#triage" data-view="triage" class="nav-link active"><span>01</span>Triage</a>
+        <a href="#agents" data-view="agents" class="nav-link"><span>02</span>Agent map</a>
+        <a href="#graph" data-view="graph" class="nav-link"><span>03</span>Knowledge graph</a>
+        <a href="#parts" data-view="parts" class="nav-link"><span>04</span>Parts map</a>
+        <a href="#directives" data-view="directives" class="nav-link"><span>05</span>Directives</a>
+        <a href="#rul" data-view="rul" class="nav-link"><span>06</span>RUL</a>
+        <a href="#audit" data-view="audit" class="nav-link"><span>07</span>Audit log</a>
+        <a href="#evaluation" data-view="evaluation" class="nav-link"><span>08</span>Evaluation</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <span class="local-badge"><i></i>Local inference</span>
+        <p>Prototype on public data.<br>Not approved maintenance data.</p>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <div class="topbar-title"><span class="mobile-brand">AeroSafe</span><span id="page-title">New case</span></div>
+        <div class="topbar-meta"><span class="aircraft-chip">Aircraft <b>A320-200</b></span><span class="language-chip">Language <b id="language-label">EN / FR</b></span><span class="service-state"><i id="service-dot"></i><span id="service-label">Connecting</span></span></div>
+      </header>
+
+      <main id="view-root" tabindex="-1">
+        <section class="view view-triage" data-view-panel="triage">
+          <div class="triage-grid">
+            <aside class="entry-column">
+              <section class="entry-card">
+                <div class="section-kicker">Defect description</div>
+                <div class="input-tabs" role="tablist" aria-label="Case input type">
+                  <button type="button" class="input-tab active" data-input-mode="type">Type</button>
+                  <button type="button" class="input-tab" data-input-mode="speak">Speak (Whisper)</button>
+                </div>
+                <form id="case-form">
+                  <label class="sr-only" for="case-text">Defect description</label>
+                  <textarea id="case-text" maxlength="10000" placeholder="Describe the defect, symptoms and flight phase…"></textarea>
+                  <div class="audio-row" id="audio-row" hidden>
+                    <label class="file-label" for="audio-file">Choose voice note</label>
+                    <input id="audio-file" type="file" accept="audio/*">
+                    <span class="file-name" id="file-name">No audio selected</span>
+                  </div>
+                  <div class="form-error" id="form-error" role="alert" hidden></div>
+                  <button class="button button-primary analyze-button" id="analyze-button" type="submit">Analyze</button>
+                  <button class="button button-outline unclear-button" id="unclear-button" type="button">Try an unclear case</button>
+                </form>
+              </section>
+              <section class="cases-section" aria-labelledby="cases-heading">
+                <div class="section-kicker" id="cases-heading">Cases <span id="case-count">0</span></div>
+                <div class="case-list" id="case-list"><div class="case-list-empty">No cases yet</div></div>
+              </section>
+            </aside>
+
+            <section class="analysis-column" aria-label="Triage analysis">
+              <div class="agent-strip" id="agent-strip" aria-label="Agent status"></div>
+              <section class="analysis-panel" id="analysis-panel">
+                <div class="empty-state" id="empty-state">
+                  <div class="empty-glyph" aria-hidden="true">✳</div>
+                  <h1>No analysis yet</h1>
+                  <p>Describe the defect on the left and press Analyze. Triage runs locally. Retrieval, directive checks and claim verification are still being built, so the system will abstain rather than invent a recommendation.</p>
+                </div>
+                <div id="case-result" hidden>
+                  <div class="result-heading">
+                    <div><div class="section-kicker">Triage result</div><h1 id="result-ata">Case analysis</h1><p id="result-subtitle"></p></div>
+                    <span class="status-pill" id="result-status">ABSTAINED</span>
+                  </div>
+                  <div class="result-notice" id="result-notice"></div>
+                  <div class="result-summary" id="result-summary"></div>
+                  <div class="result-tabs" role="tablist" aria-label="Case details">
+                    <button class="result-tab active" type="button" data-result-tab="evidence">Evidence</button>
+                    <button class="result-tab" type="button" data-result-tab="directives">ADs</button>
+                    <button class="result-tab" type="button" data-result-tab="rul">RUL</button>
+                    <button class="result-tab" type="button" data-result-tab="graph">Graph</button>
+                    <button class="result-tab" type="button" data-result-tab="trace">Agent trace</button>
+                  </div>
+                  <div class="result-tab-content" id="result-tab-content"></div>
+                  <div class="decision-actions" id="decision-actions" hidden>
+                    <span>Recommendation requires human review.</span>
+                    <button class="button button-danger" data-decision="reject" type="button">Reject</button>
+                    <button class="button button-success" data-decision="approve" type="button">Approve and log</button>
+                  </div>
+                </div>
+              </section>
+            </section>
+          </div>
+        </section>
+
+        <section class="view subview" data-view-panel="agents" hidden>
+          <div class="view-heading"><div><div class="section-kicker">Workflow</div><h1>Agent map</h1><p>Current pipeline stages and their implementation status.</p></div><span class="status-pill status-pill-warn">Prototype</span></div>
+          <div class="workflow-card"><div class="workflow" id="workflow-map"></div><div class="workflow-caption">The line shows the configured path. A stage marked “stub” is connected but does not perform its production task yet.</div></div>
+        </section>
+
+        <section class="view subview" data-view-panel="graph" hidden>
+          <div class="view-heading"><div><div class="section-kicker">Case-linked data</div><h1>Knowledge graph</h1><p>Graph path used for this answer</p></div><span class="status-pill status-pill-muted">Not connected</span></div>
+          <div class="feature-grid"><div class="feature-card graph-stage"><div id="graph-empty" class="feature-empty"></div></div><aside class="feature-card feature-aside"><div class="section-kicker">Selected node</div><h2 id="graph-selected">No node selected</h2><p id="graph-detail">Graph retrieval and expansion are not implemented, so there is no case-linked path to display.</p></aside></div>
+        </section>
+
+        <section class="view subview" data-view-panel="parts" hidden>
+          <div class="view-heading"><div><div class="section-kicker">Aircraft systems map</div><h1>Parts map</h1><p>ATA chapter overview for the selected aircraft.</p></div><span class="status-pill status-pill-muted">Illustrative</span></div>
+          <div class="feature-grid"><div class="feature-card aircraft-map-card"><div class="aircraft-map" id="aircraft-map"></div><p class="map-caption">Illustrative system map only. It is not an aircraft configuration or maintenance record.</p></div><aside class="feature-card feature-aside"><div class="section-kicker">Selected system</div><h2 id="part-selected">Select an ATA chapter</h2><p id="part-detail">The keyword baseline can rank a few ATA chapters from the defect text. Aircraft parts and open case counts are not connected.</p><div class="ata-list" id="ata-list"></div></aside></div>
+          <div class="feature-card phase-card"><div class="section-kicker">Flight phase</div><h2>Flight phase tagging</h2><p id="phase-note">No case selected. Phase entities are detected by keyword only.</p><div class="phase-track"><span>Taxi</span><span>Takeoff</span><span>Climb</span><span>Cruise</span><span>Approach</span><span>Landing</span></div></div>
+        </section>
+
+        <section class="view subview" data-view-panel="directives" hidden>
+          <div class="view-heading"><div><div class="section-kicker">Compliance</div><h1>Airworthiness directive check</h1><p>Rules-first applicability review.</p></div><span class="status-pill status-pill-warn">Not evaluated</span></div>
+          <div class="feature-card directive-empty"><div class="empty-glyph" aria-hidden="true">⌁</div><h2>Directive data is not connected</h2><p>No airworthiness directives were evaluated for this case. The system cannot determine applicability without source data, aircraft configuration and a rules engine.</p></div>
+        </section>
+
+        <section class="view subview" data-view-panel="rul" hidden>
+          <div class="view-heading"><div><div class="section-kicker">Predictive maintenance</div><h1>Sensor history and prediction</h1><p>Remaining useful life (RUL)</p></div><span class="status-pill status-pill-muted">Unavailable</span></div>
+          <div class="feature-grid rul-grid"><div class="feature-card chart-card"><div class="section-kicker">Health trend</div><div class="chart-empty"><span class="chart-line"></span><strong>No sensor series attached</strong><small>Attach a sensor CSV when RUL analysis is available.</small></div></div><aside class="feature-card feature-aside"><div class="section-kicker">Estimated RUL</div><div class="rul-value">— <small>cycles</small></div><p>No RUL model is configured. No prediction has been made.</p></aside></div>
+          <div class="feature-card sensor-card"><h2>Sensor input</h2><p>Sensor CSV upload is not connected to the pipeline yet.</p><button class="button button-outline" type="button" disabled>CSV analysis unavailable</button></div>
+        </section>
+
+        <section class="view subview" data-view-panel="audit" hidden>
+          <div class="view-heading"><div><div class="section-kicker">Tamper-evident history</div><h1>Audit log</h1><p>Case and reviewer events from the local hash chain.</p></div><button class="button button-outline" id="verify-audit" type="button">Verify chain</button></div>
+          <div class="audit-banner" id="audit-banner" aria-live="polite">Loading audit state…</div>
+          <div class="feature-card table-card"><div class="audit-table-wrap"><table class="audit-table"><thead><tr><th>#</th><th>Time</th><th>Actor</th><th>Action</th><th>Hash</th></tr></thead><tbody id="audit-rows"><tr><td colspan="5" class="table-empty">No audit records loaded.</td></tr></tbody></table></div></div>
+        </section>
+
+        <section class="view subview" data-view-panel="evaluation" hidden>
+          <div class="view-heading"><div><div class="section-kicker">Measured performance</div><h1>Evaluation</h1><p>Only report results measured on a labelled evaluation set.</p></div><span class="status-pill status-pill-muted">No results</span></div>
+          <div class="metric-grid"><article class="feature-card metric-card"><span>ATA macro-F1</span><strong>—</strong><small>Not measured</small></article><article class="feature-card metric-card"><span>Recall@10</span><strong>—</strong><small>Retriever not implemented</small></article><article class="feature-card metric-card"><span>RUL RMSE</span><strong>—</strong><small>Model not implemented</small></article><article class="feature-card metric-card"><span>Unsupported claims</span><strong>—</strong><small>No verifier evaluation set</small></article></div>
+          <div class="feature-card evaluation-card"><h2>Evaluation data</h2><p>The phrase CSV contains references only. Local recordings and a labelled gold set are required before metrics can be measured.</p><code>python eval/wer.py eval/aviation_phrases.csv</code></div>
+        </section>
+      </main>
+      <footer class="page-footer">Prototype on public data. Illustrative values are labelled. Not approved maintenance data.</footer>
+    </div>
+  </div>
+</body>
+</html>

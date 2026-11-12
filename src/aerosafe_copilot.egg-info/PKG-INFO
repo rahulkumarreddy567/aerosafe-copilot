@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: aerosafe-copilot
+Version: 0.1.0
+Summary: Multi-agent maintenance and safety-intelligence prototype for aviation (public data only)
+Requires-Python: >=3.10
+Requires-Dist: fastapi>=0.110
+Requires-Dist: uvicorn[standard]>=0.29
+Requires-Dist: pydantic>=2.6
+Requires-Dist: python-multipart>=0.0.9
+Requires-Dist: langgraph>=0.2
+Provides-Extra: speech
+Requires-Dist: faster-whisper>=1.0; extra == "speech"
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"
+Requires-Dist: httpx>=0.27; extra == "dev"
+Requires-Dist: ruff>=0.4; extra == "dev"

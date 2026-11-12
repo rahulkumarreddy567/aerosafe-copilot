@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aerosafe-copilot"
+version = "0.1.0"
+description = "Multi-agent maintenance and safety-intelligence prototype for aviation (public data only)"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.29",
+  "pydantic>=2.6",
+  "python-multipart>=0.0.9",
+  "langgraph>=0.2",
+]
+
+[project.optional-dependencies]
+speech = ["faster-whisper>=1.0"]
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+aerosafe = ["static/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
