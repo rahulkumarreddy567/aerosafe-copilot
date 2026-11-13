@@ -293,12 +293,14 @@ function renderParts() {
       <path d="M144 138 L116 113 Q109 107 114 104 L151 132 M144 164 L116 189 Q109 195 114 198 L151 170" fill="#f3f0e8"/>
       <path d="M480 96 L455 75 Q449 70 455 67 L487 89 M480 207 L455 228 Q449 233 455 236 L487 214" fill="#f3f0e8"/>
     </g>
-    <g class="ata-hotspot" data-ata="71"><circle cx="334" cy="111" r="15"/><text x="334" y="115" text-anchor="middle">71</text></g>
-    <g class="ata-hotspot" data-ata="27"><circle cx="389" cy="92" r="15"/><text x="389" y="96" text-anchor="middle">27</text></g>
-    <g class="ata-hotspot" data-ata="29"><circle cx="342" cy="153" r="15"/><text x="342" y="157" text-anchor="middle">29</text></g>
-    <g class="ata-hotspot" data-ata="31"><circle cx="252" cy="151" r="15"/><text x="252" y="155" text-anchor="middle">31</text></g>
-    <g class="ata-hotspot" data-ata="32"><circle cx="390" cy="184" r="17"/><text x="390" y="188" text-anchor="middle">32</text></g>
-    <g class="ata-hotspot" data-ata="55"><circle cx="147" cy="151" r="15"/><text x="147" y="155" text-anchor="middle">55</text></g>
+    <g class="ata-hotspot" data-ata="71" role="button" tabindex="0" aria-label="ATA 71 Power plant"><circle cx="334" cy="111" r="15"/><text x="334" y="115" text-anchor="middle">71</text></g>
+    <g class="ata-hotspot" data-ata="27" role="button" tabindex="0" aria-label="ATA 27 Flight controls"><circle cx="389" cy="92" r="15"/><text x="389" y="96" text-anchor="middle">27</text></g>
+    <g class="ata-hotspot" data-ata="28" role="button" tabindex="0" aria-label="ATA 28 Fuel"><circle cx="477" cy="176" r="15"/><text x="477" y="180" text-anchor="middle">28</text></g>
+    <g class="ata-hotspot" data-ata="29" role="button" tabindex="0" aria-label="ATA 29 Hydraulic power"><circle cx="342" cy="153" r="15"/><text x="342" y="157" text-anchor="middle">29</text></g>
+    <g class="ata-hotspot" data-ata="31" role="button" tabindex="0" aria-label="ATA 31 Instruments"><circle cx="252" cy="151" r="15"/><text x="252" y="155" text-anchor="middle">31</text></g>
+    <g class="ata-hotspot" data-ata="34" role="button" tabindex="0" aria-label="ATA 34 Navigation"><circle cx="205" cy="151" r="15"/><text x="205" y="155" text-anchor="middle">34</text></g>
+    <g class="ata-hotspot" data-ata="32" role="button" tabindex="0" aria-label="ATA 32 Landing gear"><circle cx="390" cy="184" r="17"/><text x="390" y="188" text-anchor="middle">32</text></g>
+    <g class="ata-hotspot" data-ata="55" role="button" tabindex="0" aria-label="ATA 55 Stabilizers"><circle cx="147" cy="151" r="15"/><text x="147" y="155" text-anchor="middle">55</text></g>
     <text x="360" y="285" text-anchor="middle" fill="#858174" font-size="11">ATA system positions shown for illustration only</text>
   </svg>`;
   byId("aircraft-map").innerHTML = svg;
@@ -472,6 +474,13 @@ byId("verify-audit").addEventListener("click", loadAudit);
 byId("aircraft-map").addEventListener("click", (event) => {
   const spot = event.target.closest("[data-ata]");
   if (spot) selectAta(spot.dataset.ata);
+});
+byId("aircraft-map").addEventListener("keydown", (event) => {
+  const spot = event.target.closest("[data-ata]");
+  if (spot && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    selectAta(spot.dataset.ata);
+  }
 });
 byId("ata-list").addEventListener("click", (event) => {
   const item = event.target.closest("[data-ata]");
