@@ -38,8 +38,10 @@ baseline evaluation view. These are prototype tools; none can authorize maintena
 - Endpoint: `GET /evaluation`; source fixture: `eval/ata_smoke.csv`.
 - Dataset: 14 project-authored synthetic text examples with an expected ATA code across seven
   supported categories.
-- Metrics: top-ranked ATA accuracy and macro-F1 (unrounded values are rounded to three decimals
-  in the response), with per-class support, precision, recall, and F1.
+- Metrics: top-ranked ATA accuracy and macro-F1 (computed from unrounded class scores, then rounded
+  to three decimals in the response), with per-class support, precision, recall, and F1. Macro-F1
+  averages the union of expected and predicted labels; a missing prediction is counted as a
+  `__no_match__` prediction and contributes a false negative to its expected class.
 - Retrieval recall@k, RUL RMSE, unsupported-claim rate, and voice WER remain unavailable because
   this repository does not yet include the corresponding labeled data or model outputs.
 - Limits: examples are not real maintenance narratives, independently labeled, held out, or
