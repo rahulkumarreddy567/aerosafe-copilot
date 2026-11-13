@@ -1,0 +1,15 @@
+description,expected_ata
+Landing gear failed to retract after extension,32
+Nose landing gear door actuator makes noise,32
+Hydraulic pressure drops during the test,29
+Hydraulic reservoir pressure is low,29
+Flap actuator does not respond,27
+Flight control spoiler is stuck,27
+Fuel quantity is low,28
+Fuel line leak reported,28
+Instrument display is blank,31
+Avionics instrument screen flickers,31
+Engine turbine vibration increased,71
+Power plant engine has an unusual noise,71
+Rudder movement is limited,55
+Horizontal stabilizer vibration reported,55

@@ -17,8 +17,11 @@ Inference runs locally; Whisper downloads its model on first use and then caches
 | Hash-chained audit log with tamper detection | Working, tested |
 | Whisper speech-to-text (local, faster-whisper, FR/EN auto-detect) | Docker includes the speech extra; local installs need it |
 | NLP triage (ATA ranking, entity tags) | Keyword baseline, to be replaced by a fine-tuned model |
-| Retrieval, directive rules, RUL model, local LLM, entailment verifier | TODO (see roadmap) |
-| Browser console | Triage, case board, agent map, graph, parts, directives, RUL, audit and evaluation views at `/`; live API data is shown where available |
+| Evidence retrieval, directive rules, local LLM, entailment verifier | TODO (see roadmap); recommendations remain disabled |
+| Knowledge graph | Working case graph built from keyword triage tags. It does not connect external reports, directives, or aircraft configuration. |
+| RUL view | Working CSV trend explorer with linear threshold-crossing extrapolation. This is a demo estimator, not a trained model or maintenance prediction. |
+| Evaluation view | Working ATA macro-F1, accuracy, and per-class report for a 14-row synthetic smoke set. It is not a benchmark. |
+| Browser console | Triage, case board, agent map, interactive graph, illustrative parts map, directives status, RUL, audit, and evaluation views at `/`. |
 
 ## Quick start
 
@@ -51,6 +54,20 @@ curl -s localhost:8000/audit/verify
 
 Until real retrieval and claim verification are implemented, `/cases` returns an abstention
 with no recommendation. This is intentional: placeholder evidence must not be treated as support.
+
+## Interactive graph, RUL, and evaluation
+
+- The graph screen uses `GET /cases/{case_id}/graph` and only draws the case, ATA rankings,
+  and keyword entities already returned by triage.
+- The RUL screen accepts CSV files with `cycle,health_index` columns (health index from 0 to 1,
+  increasing cycles, at least three rows). `POST /rul/analyze` fits an ordinary least-squares
+  trend and estimates crossing a user-selected threshold. The sample file is available at
+  `/static/demo_sensor.csv`.
+- The evaluation screen calls `GET /evaluation` and reports ATA macro-F1, accuracy, and per-class
+  scores for `eval/ata_smoke.csv`. This set is synthetic and intentionally small. Retrieval,
+  RUL model accuracy, claim verification, and voice WER still require real labeled data.
+
+Input formats, calculations, and known limits are documented in [`docs/feature-spec.md`](docs/feature-spec.md).
 
 Voice note (needs `pip install -e ".[speech]"`):
 

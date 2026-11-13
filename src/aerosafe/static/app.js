@@ -69,7 +69,8 @@ function setView(name) {
   byId("page-title").textContent = pageNames[name];
   if (name === "audit") loadAudit();
   if (name === "parts") renderParts();
-  if (name === "graph") renderGraph();
+  if (name === "graph") loadCaseGraph();
+  if (name === "evaluation") loadEvaluation();
 }
 
 function traceMessage(result, key) {
@@ -253,6 +254,7 @@ async function loadCase(caseId) {
     result.case_id = caseId;
     renderCase(result);
     await loadCases();
+    if (activeView === "graph") await loadCaseGraph(caseId);
   } catch (error) {
     setError(error.message);
   }
@@ -278,11 +280,171 @@ function renderWorkflow() {
   });
 }
 
-function renderGraph() {
+function svgElement(tag, attrs = {}) {
+  const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, value);
+  return element;
+}
+
+function showGraphNode(item, graph) {
+  byId("graph-selected").textContent = item.label;
+  byId("graph-detail").textContent = item.detail;
+  byId("graph-source").textContent = `Source: ${graph.source.replaceAll("_", " ")}`;
+  document.querySelectorAll(".graph-node").forEach((nodeItem) => {
+    nodeItem.classList.toggle("selected", nodeItem.dataset.nodeId === item.id);
+    nodeItem.setAttribute("aria-pressed", String(nodeItem.dataset.nodeId === item.id));
+  });
+}
+
+function renderCaseGraph(graph) {
+  const stage = byId("graph-network");
   const empty = byId("graph-empty");
-  empty.replaceChildren(node("strong", "", "No case-linked graph path"), node("p", "", activeCase ? "This case has no retrieved source nodes. Retrieval and graph expansion are not implemented." : "Run a triage case first. Graph retrieval and expansion are not implemented."));
-  byId("graph-selected").textContent = activeCase?.ata?.[0] ? `ATA ${activeCase.ata[0][0]} · ${activeCase.ata[0][1]}` : "No node selected";
-  byId("graph-detail").textContent = "The triage label is available, but no evidence, directive or component relationships have been retrieved for this case.";
+  empty.hidden = true;
+  stage.replaceChildren();
+  const ataNodes = graph.nodes.filter((item) => item.kind === "ata");
+  const tagNodes = graph.nodes.filter((item) => item.kind !== "case" && item.kind !== "ata");
+  const shownTags = tagNodes.slice(0, 8);
+  const visibleNodes = [...graph.nodes.filter((item) => item.kind === "case" || item.kind === "ata"), ...shownTags];
+  const height = Math.max(430, (Math.max(ataNodes.length, shownTags.length, 1) + 1) * 84);
+  const positions = new Map();
+  positions.set("case", { x: 145, y: height / 2 });
+  ataNodes.forEach((item, index) => positions.set(item.id, { x: 450, y: ((index + 1) * height) / (ataNodes.length + 1) }));
+  shownTags.forEach((item, index) => positions.set(item.id, { x: 770, y: ((index + 1) * height) / (shownTags.length + 1) }));
+
+  const svg = svgElement("svg", {
+    viewBox: `0 0 930 ${height}`,
+    role: "img",
+    "aria-label": `Case relationship graph with ${visibleNodes.length} nodes`,
+    preserveAspectRatio: "xMidYMin meet",
+  });
+  const lines = svgElement("g", { class: "graph-edges" });
+  for (const edge of graph.edges) {
+    const source = positions.get(edge.source);
+    const target = positions.get(edge.target);
+    if (!source || !target) continue;
+    lines.append(svgElement("line", { x1: source.x + 66, y1: source.y, x2: target.x - 74, y2: target.y }));
+  }
+  svg.append(lines);
+
+  visibleNodes.forEach((item) => {
+    const position = positions.get(item.id);
+    const group = svgElement("g", {
+      class: `graph-node graph-node-${item.kind}`,
+      transform: `translate(${position.x}, ${position.y})`,
+      tabindex: "0",
+      role: "button",
+      "aria-label": `${item.kind}: ${item.label}`,
+      "aria-pressed": "false",
+    });
+    group.dataset.nodeId = item.id;
+    group.append(svgElement("rect", { x: -70, y: -27, width: 140, height: 54, rx: 14 }));
+    const label = svgElement("text", { "text-anchor": "middle", y: 4 });
+    label.textContent = item.label.length > 21 ? `${item.label.slice(0, 19)}…` : item.label;
+    group.append(label);
+    group.addEventListener("click", () => showGraphNode(item, graph));
+    group.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        showGraphNode(item, graph);
+      }
+    });
+    svg.append(group);
+  });
+  stage.append(svg);
+  byId("graph-count").textContent = `${graph.nodes.length} nodes · ${graph.edges.length} links`;
+  byId("graph-limitations").textContent = graph.limitations + (tagNodes.length > shownTags.length ? ` Showing ${shownTags.length} of ${tagNodes.length} keyword tags.` : "");
+  showGraphNode(graph.nodes[0], graph);
+}
+
+async function loadCaseGraph(caseId = activeCase?.case_id) {
+  const selector = byId("graph-case-select");
+  const empty = byId("graph-empty");
+  byId("graph-count").textContent = "Loading case graph…";
+  try {
+    const cases = await request("/cases");
+    selector.replaceChildren(node("option", "", "Choose a case"));
+    selector.options[0].value = "";
+    cases.forEach((item) => {
+      const option = node("option", "", `${item.case_id} · ${item.ata?.[0]?.[0] ? `ATA ${item.ata[0][0]}` : "No ATA match"}`);
+      option.value = item.case_id;
+      selector.append(option);
+    });
+    const selectedId = caseId || cases[0]?.case_id;
+    if (!selectedId) {
+      byId("graph-network").replaceChildren();
+      empty.hidden = false;
+      empty.replaceChildren(node("strong", "", "No cases to graph yet"), node("p", "", "Create a case from Triage to see its local ATA ranking and extracted keyword tags here."));
+      byId("graph-count").textContent = "No case selected";
+      byId("graph-selected").textContent = "Choose a node";
+      byId("graph-detail").textContent = "The graph is built from the selected case’s triage output.";
+      byId("graph-source").textContent = "No case selected";
+      return;
+    }
+    selector.value = selectedId;
+    const graph = await request(`/cases/${encodeURIComponent(selectedId)}/graph`);
+    renderCaseGraph(graph);
+  } catch (error) {
+    byId("graph-network").replaceChildren();
+    empty.hidden = false;
+    empty.replaceChildren(node("strong", "", "Graph unavailable"), node("p", "", error.message));
+    byId("graph-count").textContent = "Could not load graph";
+  }
+}
+
+function renderRulChart(result) {
+  const host = byId("rul-chart");
+  host.replaceChildren();
+  const width = 760;
+  const height = 280;
+  const pad = { top: 28, right: 26, bottom: 42, left: 56 };
+  const values = result.series.map((point) => point.health_index);
+  const minY = Math.min(result.threshold, ...values);
+  const maxY = Math.max(1, ...values);
+  const xStart = result.series[0].cycle;
+  const observedEnd = result.last_cycle;
+  const observedSpan = Math.max(1, observedEnd - xStart);
+  const plottedForecast = Math.min(result.estimate_cycles, observedSpan * 2);
+  const xEnd = observedEnd + Math.max(plottedForecast, observedSpan * 0.2);
+  const x = (cycle) => pad.left + ((cycle - xStart) / Math.max(1, xEnd - xStart)) * (width - pad.left - pad.right);
+  const y = (health) => pad.top + ((maxY - health) / Math.max(0.01, maxY - minY)) * (height - pad.top - pad.bottom);
+  const svg = svgElement("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": "Observed health index and illustrative projected trend" });
+  const thresholdY = y(result.threshold);
+  svg.append(svgElement("line", { x1: pad.left, y1: thresholdY, x2: width - pad.right, y2: thresholdY, class: "rul-threshold-line" }));
+  const observedPath = result.series.map((point, index) => `${index ? "L" : "M"}${x(point.cycle)},${y(point.health_index)}`).join(" ");
+  svg.append(svgElement("path", { d: observedPath, class: "rul-observed-line" }));
+  const lastPoint = result.series[result.series.length - 1];
+  const projectionCycle = observedEnd + plottedForecast;
+  const projectionHealth = Math.max(result.threshold, lastPoint.health_index + result.slope_per_cycle * plottedForecast);
+  svg.append(svgElement("path", { d: `M${x(lastPoint.cycle)},${y(lastPoint.health_index)} L${x(projectionCycle)},${y(projectionHealth)}`, class: "rul-projected-line" }));
+  result.series.forEach((point) => svg.append(svgElement("circle", { cx: x(point.cycle), cy: y(point.health_index), r: 4, class: "rul-point" })));
+  const axis = svgElement("text", { x: pad.left, y: height - 10, class: "rul-axis-label" });
+  axis.textContent = `Observed cycles ${xStart}–${observedEnd} · threshold ${result.threshold.toFixed(2)}`;
+  svg.append(axis);
+  host.append(svg);
+  host.append(node("div", "chart-legend", "Observed series   ·   Dashed line: linear projection   ·   Threshold shown in red"));
+}
+
+async function loadEvaluation() {
+  byId("evaluation-macro-f1").textContent = "Loading…";
+  try {
+    const result = await request("/evaluation");
+    byId("evaluation-macro-f1").textContent = result.macro_f1 === null ? "—" : result.macro_f1.toFixed(3);
+    byId("evaluation-accuracy").textContent = result.accuracy === null ? "—" : result.accuracy.toFixed(3);
+    byId("evaluation-samples").textContent = String(result.sample_count);
+    byId("evaluation-sample-count").textContent = `${result.sample_count} synthetic examples`;
+    byId("evaluation-warning").textContent = result.warning;
+    const rows = byId("evaluation-rows");
+    rows.replaceChildren();
+    result.per_class.forEach((item) => {
+      const row = node("tr");
+      [item.ata, String(item.support), item.precision.toFixed(3), item.recall.toFixed(3), item.f1.toFixed(3)].forEach((value) => row.append(node("td", "", value)));
+      rows.append(row);
+    });
+  } catch (error) {
+    byId("evaluation-macro-f1").textContent = "Error";
+    byId("evaluation-sample-count").textContent = error.message;
+    byId("evaluation-warning").textContent = "Could not load evaluation results.";
+  }
 }
 
 function renderParts() {
@@ -470,7 +632,65 @@ byId("case-list").addEventListener("click", (event) => {
   if (row) loadCase(row.dataset.caseId);
 });
 
+byId("graph-case-select").addEventListener("change", (event) => {
+  if (event.target.value) loadCaseGraph(event.target.value);
+});
+
+async function analyzeSensorFile(file) {
+  const error = byId("rul-error");
+  error.hidden = true;
+  if (!file) {
+    error.textContent = "Choose a sensor CSV first.";
+    error.hidden = false;
+    return false;
+  }
+  const button = byId("rul-button");
+  button.disabled = true;
+  button.textContent = "Analyzing…";
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const threshold = byId("rul-threshold").value;
+    const result = await request(`/rul/analyze?threshold=${encodeURIComponent(threshold)}`, { method: "POST", body: form });
+    byId("rul-estimate").replaceChildren(document.createTextNode(String(result.estimate_cycles)), node("small", "", "cycles"));
+    byId("rul-result-detail").textContent = `Last health ${result.last_health_index.toFixed(3)} at cycle ${result.last_cycle}. Trend ${result.slope_per_cycle.toFixed(5)} per cycle; threshold ${result.threshold.toFixed(2)}.`;
+    byId("rul-method").textContent = "Illustrative linear trend";
+    renderRulChart(result);
+  } catch (requestError) {
+    error.textContent = requestError.message;
+    error.hidden = false;
+    return false;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Analyze trend";
+  }
+  return true;
+}
+
+byId("rul-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await analyzeSensorFile(byId("sensor-file").files[0]);
+});
+
+byId("use-rul-sample").addEventListener("click", async () => {
+  const sampleButton = byId("use-rul-sample");
+  sampleButton.disabled = true;
+  try {
+    const response = await fetch("/static/demo_sensor.csv");
+    if (!response.ok) throw new Error("Could not load the sample CSV.");
+    const contents = await response.blob();
+    const file = new File([contents], "demo_sensor.csv", { type: "text/csv" });
+    await analyzeSensorFile(file);
+  } catch (error) {
+    byId("rul-error").textContent = error.message;
+    byId("rul-error").hidden = false;
+  } finally {
+    sampleButton.disabled = false;
+  }
+});
+
 byId("verify-audit").addEventListener("click", loadAudit);
+byId("refresh-evaluation").addEventListener("click", loadEvaluation);
 byId("aircraft-map").addEventListener("click", (event) => {
   const spot = event.target.closest("[data-ata]");
   if (spot) selectAta(spot.dataset.ata);

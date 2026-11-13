@@ -7,14 +7,17 @@ from pathlib import Path
 from threading import RLock
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from aerosafe.agents.graph import build_graph
+from aerosafe.agents.case_graph import build_case_graph
 from aerosafe.audit.chain import AuditLog
 from aerosafe.config import get_settings
+from aerosafe.evaluation import EVAL_CSV, evaluate_ata_baseline
+from aerosafe.rul import MAX_SENSOR_CSV_BYTES, SensorCsvError, estimate_rul
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -31,6 +34,7 @@ app.mount("/static", StaticFiles(directory=WEB_STATIC), name="static")
 CASES: dict[str, dict] = {}
 CASES_LOCK = RLock()
 MAX_AUDIO_BYTES = 25 * 1024 * 1024
+MAX_SENSOR_UPLOAD_BYTES = MAX_SENSOR_CSV_BYTES
 
 
 @lru_cache(maxsize=1)
@@ -140,6 +144,38 @@ def get_case(case_id: str):
         if case_id not in CASES:
             raise HTTPException(404, "unknown case")
         return CASES[case_id]
+
+
+@app.get("/cases/{case_id}/graph")
+def case_graph(case_id: str):
+    with CASES_LOCK:
+        case = CASES.get(case_id)
+        if not case:
+            raise HTTPException(404, "unknown case")
+        return build_case_graph(case_id, case)
+
+
+@app.post("/rul/analyze")
+async def analyze_rul(file: UploadFile, threshold: float = Query(default=0.2)):
+    contents = await file.read(MAX_SENSOR_UPLOAD_BYTES + 1)
+    if len(contents) > MAX_SENSOR_UPLOAD_BYTES:
+        raise HTTPException(413, "The CSV file exceeds the 1 MB limit.")
+    try:
+        return estimate_rul(contents, threshold)
+    except SensorCsvError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.get("/evaluation")
+def evaluation():
+    return evaluate_ata_baseline()
+
+
+@app.get("/evaluation/data", include_in_schema=False)
+def evaluation_data():
+    if not EVAL_CSV.is_file():
+        raise HTTPException(404, "Evaluation data file is unavailable")
+    return FileResponse(EVAL_CSV, media_type="text/csv", filename="ata_smoke.csv")
 
 
 @app.post("/cases/{case_id}/decision")

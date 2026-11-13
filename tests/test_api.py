@@ -95,3 +95,40 @@ def test_invalid_runtime_configuration_fails_at_startup(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="AEROSAFE_MAX_RETRIES"):
         with TestClient(app):
             pass
+
+
+def test_case_graph_is_built_from_real_triage_signals(tmp_path, monkeypatch):
+    monkeypatch.setenv("AEROSAFE_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
+    c = TestClient(app)
+    created = c.post("/cases", json={"text": "Hydraulic pressure drop during landing gear retraction"}).json()
+    response = c.get(f"/cases/{created['case_id']}/graph")
+    assert response.status_code == 200
+    graph = response.json()
+    assert graph["source"] == "local_keyword_triage"
+    assert {node["kind"] for node in graph["nodes"]} >= {"case", "ata", "symptom", "component", "phase"}
+    assert graph["edges"]
+    assert "No external reports" in graph["limitations"]
+    assert c.get("/cases/unknown/graph").status_code == 404
+
+
+def test_rul_csv_endpoint_and_evaluation_endpoints():
+    c = TestClient(app)
+    response = c.post(
+        "/rul/analyze?threshold=0.2",
+        files={"file": ("sensor.csv", b"cycle,health_index\n0,1\n10,0.8\n20,0.6\n", "text/csv")},
+    )
+    assert response.status_code == 200
+    assert response.json()["estimate_cycles"] == 20
+    assert c.post(
+        "/rul/analyze",
+        files={"file": ("bad.csv", b"cycle,temperature\n0,1\n1,2\n2,3\n", "text/csv")},
+    ).status_code == 422
+
+    evaluation = c.get("/evaluation").json()
+    assert evaluation["sample_count"] == 14
+    assert evaluation["accuracy"] == 1
+    assert evaluation["macro_f1"] == 1
+    assert "synthetic" in evaluation["warning"].lower()
+    dataset = c.get("/evaluation/data")
+    assert dataset.status_code == 200
+    assert "expected_ata" in dataset.text
