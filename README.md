@@ -68,6 +68,8 @@ with no recommendation. This is intentional: placeholder evidence must not be tr
   RUL model accuracy, claim verification, and voice WER still require real labeled data.
 
 Input formats, calculations, and known limits are documented in [`docs/feature-spec.md`](docs/feature-spec.md).
+Screen behavior, visual language, responsive rules, accessibility requirements, and acceptance
+checks are documented in [`docs/ui-spec.md`](docs/ui-spec.md).
 
 Voice note (needs `pip install -e ".[speech]"`):
 

@@ -139,18 +139,26 @@ function renderCase(result, usedSpeech = false) {
     ? `ATA ${result.ata[0][0]} · ${result.ata[0][1]}`
     : "Triage complete · no ATA match";
   byId("result-subtitle").textContent = result.case_id || "Current analysis";
-  const status = result.outcome || "unknown";
-  byId("result-status").textContent = status.replaceAll("_", " ").toUpperCase();
+  const status = result.decision || result.outcome || "unknown";
+  const statusPill = byId("result-status");
+  statusPill.className = `status-pill status-${status.replaceAll("_", "-")}`;
+  statusPill.textContent = status.replaceAll("_", " ").toUpperCase();
   byId("result-notice").textContent = status === "abstained"
     ? "ABSTAINED · No evidence-backed recommendation was produced. Retrieval and claim verification are not implemented."
     : status === "awaiting_approval"
       ? "REVIEW REQUIRED · Review supporting evidence and cited claims before recording a decision."
+      : ["approve", "reject"].includes(status)
+        ? `DECISION LOGGED · Reviewer decision: ${status.toUpperCase()}.`
       : "Analysis status is unavailable.";
   renderSummary(result);
   renderAgents(result, usedSpeech);
   byId("decision-actions").hidden = status !== "awaiting_approval" || Boolean(result.decision);
   activeResultTab = "evidence";
-  document.querySelectorAll(".result-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.resultTab === activeResultTab));
+  document.querySelectorAll(".result-tab").forEach((tab) => {
+    const selected = tab.dataset.resultTab === activeResultTab;
+    tab.classList.toggle("active", selected);
+    tab.setAttribute("aria-selected", String(selected));
+  });
   renderResultTab(activeResultTab);
   if (result.case_id) {
     byId("language-label").textContent = (result.language || "EN").toUpperCase();
@@ -159,7 +167,11 @@ function renderCase(result, usedSpeech = false) {
 
 function renderResultTab(tabName) {
   activeResultTab = tabName;
-  document.querySelectorAll(".result-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.resultTab === tabName));
+  document.querySelectorAll(".result-tab").forEach((tab) => {
+    const selected = tab.dataset.resultTab === tabName;
+    tab.classList.toggle("active", selected);
+    tab.setAttribute("aria-selected", String(selected));
+  });
   const content = byId("result-tab-content");
   content.replaceChildren();
   const result = activeCase;
@@ -594,7 +606,11 @@ byId("audio-file").addEventListener("change", () => {
 document.querySelectorAll("[data-input-mode]").forEach((tab) => {
   tab.addEventListener("click", () => {
     speechMode = tab.dataset.inputMode === "speak";
-    document.querySelectorAll("[data-input-mode]").forEach((item) => item.classList.toggle("active", item === tab));
+    document.querySelectorAll("[data-input-mode]").forEach((item) => {
+      const selected = item === tab;
+      item.classList.toggle("active", selected);
+      item.setAttribute("aria-selected", String(selected));
+    });
     byId("audio-row").hidden = !speechMode;
     if (!speechMode) {
       byId("audio-file").value = "";

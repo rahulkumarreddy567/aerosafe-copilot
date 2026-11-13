@@ -33,19 +33,20 @@
 
     <div class="main-shell">
       <header class="topbar">
-        <div class="topbar-title"><span class="mobile-brand">AeroSafe</span><span id="page-title">New case</span></div>
-        <div class="topbar-meta"><span class="aircraft-chip">Aircraft <b>A320-200</b></span><span class="language-chip">Language <b id="language-label">EN / FR</b></span><span class="service-state"><i id="service-dot"></i><span id="service-label">Connecting</span></span></div>
+        <div class="topbar-title"><span class="mobile-brand">AeroSafe</span><span id="page-title">New case</span><span class="topbar-context">DEMO CONSOLE</span></div>
+        <div class="topbar-meta"><span class="aircraft-chip">Demo aircraft <b>A320-200</b></span><span class="language-chip">Language <b id="language-label">EN / FR</b></span><span class="service-state"><i id="service-dot"></i><span id="service-label">Connecting</span></span></div>
       </header>
 
       <main id="view-root" tabindex="-1">
         <section class="view view-triage" data-view-panel="triage">
+          <div class="triage-intro"><div><div class="section-kicker">Maintenance intelligence · Prototype</div><h1>New maintenance case</h1><p>Describe a defect to see local triage signals and a trace of the current workflow.</p></div><div class="intro-badges"><span><i></i>Local processing</span><span>English · Français</span></div></div>
           <div class="triage-grid">
             <aside class="entry-column">
               <section class="entry-card">
                 <div class="section-kicker">Defect description</div>
                 <div class="input-tabs" role="tablist" aria-label="Case input type">
-                  <button type="button" class="input-tab active" data-input-mode="type">Type</button>
-                  <button type="button" class="input-tab" data-input-mode="speak">Speak (Whisper)</button>
+                  <button type="button" role="tab" aria-selected="true" class="input-tab active" data-input-mode="type">Type</button>
+                  <button type="button" role="tab" aria-selected="false" class="input-tab" data-input-mode="speak">Speak (Whisper)</button>
                 </div>
                 <form id="case-form">
                   <label class="sr-only" for="case-text">Defect description</label>
@@ -82,11 +83,11 @@
                   <div class="result-notice" id="result-notice"></div>
                   <div class="result-summary" id="result-summary"></div>
                   <div class="result-tabs" role="tablist" aria-label="Case details">
-                    <button class="result-tab active" type="button" data-result-tab="evidence">Evidence</button>
-                    <button class="result-tab" type="button" data-result-tab="directives">ADs</button>
-                    <button class="result-tab" type="button" data-result-tab="rul">RUL</button>
-                    <button class="result-tab" type="button" data-result-tab="graph">Graph</button>
-                    <button class="result-tab" type="button" data-result-tab="trace">Agent trace</button>
+                    <button class="result-tab active" role="tab" aria-selected="true" type="button" data-result-tab="evidence">Evidence</button>
+                    <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="directives">ADs</button>
+                    <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="rul">RUL</button>
+                    <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="graph">Graph</button>
+                    <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="trace">Agent trace</button>
                   </div>
                   <div class="result-tab-content" id="result-tab-content"></div>
                   <div class="decision-actions" id="decision-actions" hidden>
