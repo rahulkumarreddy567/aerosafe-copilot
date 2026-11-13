@@ -94,11 +94,13 @@ async def transcribe_audio(file: UploadFile):
         tmp.write(audio)
         tmp.flush()
         try:
-            from aerosafe.speech.whisper_service import transcribe
+            from aerosafe.speech.whisper_service import InvalidAudioError, transcribe
 
             t = transcribe(tmp.name)
         except ImportError as exc:  # optional faster-whisper dependency
             raise HTTPException(501, "Install the speech extra: pip install -e '.[speech]'") from exc
+        except InvalidAudioError as exc:
+            raise HTTPException(422, str(exc)) from exc
     return {"text": t.text, "language": t.language, "language_probability": t.language_probability}
 
 

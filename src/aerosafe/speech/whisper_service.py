@@ -16,6 +16,10 @@ AVIATION_PROMPT = (
 )
 
 
+class InvalidAudioError(ValueError):
+    """Raised when an uploaded file cannot be decoded as audio."""
+
+
 @dataclass
 class Transcript:
     text: str
@@ -35,12 +39,19 @@ def transcribe(audio_path: str, language: str | None = None) -> Transcript:
     """Transcribe an audio file. Leave `language` empty to auto-detect FR/EN."""
     cfg = get_settings()
     model = _load_model(cfg.whisper_model, cfg.whisper_device, cfg.whisper_compute_type)
-    segments, info = model.transcribe(
-        audio_path,
-        beam_size=5,
-        language=language,
-        vad_filter=True,
-        initial_prompt=AVIATION_PROMPT,
-    )
-    text = " ".join(seg.text.strip() for seg in segments).strip()
+    try:
+        segments, info = model.transcribe(
+            audio_path,
+            beam_size=5,
+            language=language,
+            vad_filter=True,
+            initial_prompt=AVIATION_PROMPT,
+        )
+        text = " ".join(seg.text.strip() for seg in segments).strip()
+    except Exception as exc:
+        from av.error import InvalidDataError
+
+        if isinstance(exc, InvalidDataError):
+            raise InvalidAudioError("The uploaded file is not valid or supported audio.") from exc
+        raise
     return Transcript(text, info.language, float(info.language_probability), float(info.duration))

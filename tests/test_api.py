@@ -10,8 +10,8 @@ def test_case_flow_and_audit(tmp_path, monkeypatch):
     assert c.get("/health").json() == {"status": "ok"}
     page = c.get("/")
     assert page.status_code == 200
-    assert "New maintenance case" in page.text
-    assert "Verify audit log" in page.text
+    assert "New case" in page.text
+    assert "Audit log" in page.text
     response = c.post("/cases", json={"text": "hydraulic pressure drop on landing gear retraction"})
     assert response.status_code == 200
     r = response.json()
@@ -73,6 +73,20 @@ def test_transcription_rejects_oversize_upload(monkeypatch):
     c = TestClient(app)
     response = c.post("/transcribe", files={"file": ("clip.wav", b"12345", "audio/wav")})
     assert response.status_code == 413
+
+
+def test_transcription_reports_invalid_audio_as_client_error(monkeypatch):
+    from aerosafe.speech import whisper_service
+    from aerosafe.speech.whisper_service import InvalidAudioError
+
+    def invalid_audio(*args, **kwargs):
+        raise InvalidAudioError("The uploaded file is not valid or supported audio.")
+
+    monkeypatch.setattr(whisper_service, "transcribe", invalid_audio)
+    c = TestClient(app)
+    response = c.post("/transcribe", files={"file": ("clip.bin", b"not audio", "application/octet-stream")})
+    assert response.status_code == 422
+    assert response.json()["detail"] == "The uploaded file is not valid or supported audio."
 
 
 def test_invalid_runtime_configuration_fails_at_startup(tmp_path, monkeypatch):
