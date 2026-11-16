@@ -139,6 +139,7 @@ function renderCase(result, usedSpeech = false) {
     ? `ATA ${result.ata[0][0]} · ${result.ata[0][1]}`
     : "Triage complete · no ATA match";
   byId("result-subtitle").textContent = result.case_id || "Current analysis";
+  byId("export-case").disabled = false;
   const status = result.decision || result.outcome || "unknown";
   const statusPill = byId("result-status");
   statusPill.className = `status-pill status-${status.replaceAll("_", "-")}`;
@@ -163,6 +164,30 @@ function renderCase(result, usedSpeech = false) {
   if (result.case_id) {
     byId("language-label").textContent = (result.language || "EN").toUpperCase();
   }
+}
+
+function exportActiveCase() {
+  if (!activeCase) return;
+  const payload = {
+    format: "aerosafe-case-export/v1",
+    exported_at: new Date().toISOString(),
+    case_id: activeCase.case_id || null,
+    case: activeCase,
+    limitations: [
+      "ATA and entity tags are keyword-baseline signals, not verified findings.",
+      "Evidence retrieval, directive applicability, and claim verification are not implemented.",
+      "This export is not an approved maintenance record or maintenance instruction.",
+    ],
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = node("a");
+  link.href = url;
+  link.download = `${activeCase.case_id || "aerosafe-case"}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function renderResultTab(tabName) {
@@ -709,6 +734,7 @@ byId("use-rul-sample").addEventListener("click", async () => {
 });
 
 byId("verify-audit").addEventListener("click", loadAudit);
+byId("export-case").addEventListener("click", exportActiveCase);
 byId("refresh-evaluation").addEventListener("click", loadEvaluation);
 byId("aircraft-map").addEventListener("click", (event) => {
   const spot = event.target.closest("[data-ata]");

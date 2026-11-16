@@ -176,3 +176,5 @@ main{padding-top:30px}
 @media(max-width:1080px){.triage-intro h1{font-size:27px}.entry-card{padding:16px}}
 @media(max-width:800px){main{padding-top:20px}.triage-intro{align-items:flex-start;flex-direction:column}.intro-badges{justify-content:flex-start}.empty-state{padding:45px 24px}.topbar-context{display:none}}
 @media(max-width:560px){.triage-intro{margin-bottom:17px;padding-bottom:14px}.triage-intro h1{font-size:25px}.entry-card,.cases-section{padding:15px}.analysis-panel{border-radius:13px}.result-heading{gap:10px}.summary-cell{padding:8px}.workflow-card{padding:15px}.view-heading{border-bottom:0}.page-footer{line-height:1.5}}
+.result-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.evaluation-gaps ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px;padding-left:18px;color:#646970;font-size:12px;line-height:1.55}.evaluation-gaps li strong{color:#344d6d}.evaluation-gaps>p{font-size:11px;color:#777b7d}
+@media(max-width:560px){.evaluation-gaps ul{grid-template-columns:1fr}.result-actions{gap:6px}.result-actions .button{padding:8px 9px;font-size:10px}}

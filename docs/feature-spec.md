@@ -3,6 +3,15 @@
 This document defines the working contract for the case graph, sensor trend explorer, and
 baseline evaluation view. These are prototype tools; none can authorize maintenance work.
 
+## Case export
+
+- A user can download the selected case as JSON from the triage result.
+- Format version: `aerosafe-case-export/v1`; includes export timestamp, case ID, complete
+  in-memory analysis payload, and explicit implementation/data limitations.
+- The browser creates the file locally; no case is sent to a new service. Exporting is optional
+  and does not persist case history in the API.
+- The file is a prototype analysis artifact, not an approved maintenance record or instruction.
+
 ## Case relationship graph
 
 - Source: the selected in-memory case returned by `POST /cases`.
@@ -44,6 +53,8 @@ baseline evaluation view. These are prototype tools; none can authorize maintena
   `__no_match__` prediction and contributes a false negative to its expected class.
 - Retrieval recall@k, RUL RMSE, unsupported-claim rate, and voice WER remain unavailable because
   this repository does not yet include the corresponding labeled data or model outputs.
+- The UI gives prerequisites for those measures in one compact section and does not render empty
+  placeholder score tiles.
 - Limits: examples are not real maintenance narratives, independently labeled, held out, or
   representative of fleet operations. The displayed metrics are a wiring/sanity check only and
   must not be described as model performance on aviation data.

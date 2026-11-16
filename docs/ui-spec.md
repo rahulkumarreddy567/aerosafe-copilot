@@ -31,6 +31,9 @@ procedures.
 - The case board lists recent in-memory cases and their ATA/status summary. Selecting a case
   reloads its result. On page startup, the most recent in-memory case is restored automatically.
   Case history resets when the API process restarts.
+- A selected case can be exported as versioned JSON with its analysis payload and explicit
+  prototype limitations. Export is a user-initiated local browser download; it is not an approved
+  maintenance record.
 - Reviewer controls appear only for a case in `awaiting_approval`; decisions are logged once.
 
 ### Agent map
@@ -83,6 +86,8 @@ procedures.
   accuracy, macro-F1, and per-class precision/recall/F1.
 - Keep the synthetic/non-operational warning next to the metrics and allow downloading the exact
   input CSV used to produce them.
+- Show only measured metrics as score tiles. Explain prerequisites for pending metrics once in a
+  compact section rather than rendering empty-value tiles.
 - Keep retrieval recall, validated RUL RMSE, unsupported-claim rate, and voice WER unavailable
   until suitable labeled data and corresponding implementations exist.
 
