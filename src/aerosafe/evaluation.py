@@ -14,7 +14,13 @@ def score_predictions(expected: list[str], predicted: list[str]) -> dict:
     if len(expected) != len(predicted):
         raise ValueError("expected and predicted must have equal lengths")
     if not expected:
-        return {"sample_count": 0, "accuracy": None, "macro_f1": None, "per_class": []}
+        return {
+            "sample_count": 0,
+            "accuracy": None,
+            "macro_f1": None,
+            "per_class": [],
+            "confusion_matrix": {"labels": [], "rows": []},
+        }
 
     labels = sorted(set(expected) | set(predicted))
     true_counts = {label: expected.count(label) for label in labels}
@@ -41,11 +47,17 @@ def score_predictions(expected: list[str], predicted: list[str]) -> dict:
         })
 
     correct = sum(actual == guess for actual, guess in zip(expected, predicted))
+    confusion = [
+        [sum(actual == actual_label and guess == predicted_label
+             for actual, guess in zip(expected, predicted)) for predicted_label in labels]
+        for actual_label in labels
+    ]
     return {
         "sample_count": len(expected),
         "accuracy": round(correct / len(expected), 3),
         "macro_f1": round(sum(raw_f1) / len(raw_f1), 3),
         "per_class": per_class,
+        "confusion_matrix": {"labels": labels, "rows": confusion},
     }
 
 
@@ -54,12 +66,15 @@ def evaluate_ata_baseline() -> dict:
         rows = list(csv.DictReader(stream))
     expected = [row["expected_ata"] for row in rows]
     predicted = []
+    top3_hits = 0
     for row in rows:
         ranked = analyze(row["description"]).ata
         predicted.append(ranked[0][0] if ranked else "__no_match__")
+        top3_hits += int(row["expected_ata"] in {code for code, _, _ in ranked[:3]})
 
     return {
         "dataset": "synthetic_smoke_set",
         **score_predictions(expected, predicted),
+        "top3_accuracy": round(top3_hits / len(rows), 3) if rows else None,
         "warning": "Synthetic sanity check only; these examples are not an operational or held-out benchmark.",
     }

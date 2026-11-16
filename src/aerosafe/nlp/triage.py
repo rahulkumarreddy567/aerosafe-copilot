@@ -29,6 +29,7 @@ class TriageResult:
     language: str
     ata: list[tuple[str, str, float]] = field(default_factory=list)  # (code, name, score)
     entities: list[tuple[str, str]] = field(default_factory=list)    # (label, text)
+    signals: list[dict] = field(default_factory=list)
 
 
 def detect_language(text: str) -> str:
@@ -37,11 +38,23 @@ def detect_language(text: str) -> str:
 
 def analyze(text: str) -> TriageResult:
     low = text.lower()
-    raw = {c: sum(low.count(k) for k in kws) for c, kws in ATA_KEYWORDS.items()}
+    counts = {code: {term: low.count(term) for term in terms if low.count(term)}
+              for code, terms in ATA_KEYWORDS.items()}
+    raw = {code: sum(found.values()) for code, found in counts.items()}
     total = sum(raw.values()) or 1
     ranked = sorted(raw.items(), key=lambda kv: kv[1], reverse=True)[:3]
     ata = [(c, ATA_NAMES[c], round(v / total, 2)) for c, v in ranked if v > 0]
+    signals = [
+        {
+            "ata": code,
+            "name": ATA_NAMES[code],
+            "rank": index,
+            "relative_match_share": round(raw[code] / total, 2),
+            "matched_terms": [{"term": term, "count": count} for term, count in counts[code].items()],
+        }
+        for index, (code, _) in enumerate(ranked, start=1) if raw[code] > 0
+    ]
     ents = [("SYMPTOM", s) for s in SYMPTOMS if s in low]
     ents += [("COMPONENT", c) for c in COMPONENTS if c in low]
     ents += [("PHASE", p) for p in PHASES if p in low]
-    return TriageResult(language=detect_language(text), ata=ata, entities=ents)
+    return TriageResult(language=detect_language(text), ata=ata, entities=ents, signals=signals)

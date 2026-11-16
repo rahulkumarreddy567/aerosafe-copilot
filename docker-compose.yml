@@ -9,6 +9,7 @@ services:
       AEROSAFE_WHISPER_COMPUTE: ${AEROSAFE_WHISPER_COMPUTE:-int8}
       AEROSAFE_MAX_RETRIES: ${AEROSAFE_MAX_RETRIES:-2}
       AEROSAFE_AUDIT_PATH: ${AEROSAFE_AUDIT_PATH:-/data/audit.jsonl}
+      AEROSAFE_CASES_PATH: ${AEROSAFE_CASES_PATH:-/data/cases.sqlite3}
     volumes:
       - ./data:/data
       - whisper_cache:/root/.cache/huggingface

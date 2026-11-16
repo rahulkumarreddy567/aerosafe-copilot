@@ -11,7 +11,8 @@ procedures.
 
 - The persistent sidebar navigates to Triage, Agent map, Knowledge graph, Parts map, Directives,
   RUL, Audit log, and Evaluation. The active destination is visually and semantically identified.
-- The top bar shows the current view, demo aircraft label, EN/FR language mode, and API health.
+- The top bar shows the current view, a clear “aircraft context not connected” state, detected
+  language, and API health. It must not name an aircraft until a profile is entered and sourced.
 - The global footer and prototype badges remain visible as context that displayed data is not
   approved maintenance information.
 - The desktop palette uses midnight blue for navigation, white elevated cards for work areas,
@@ -24,16 +25,20 @@ procedures.
 
 - Provide typed text and local Whisper audio input modes. Empty text and empty audio submission
   show an inline error. Invalid or unsupported audio returns a readable error.
-- Analyze creates a case, shows the ATA keyword ranking, language/entity tags, evidence count,
+- Analyze creates a case, shows its original description, creation time, ATA keyword ranking,
+  matched keyword signals, language/entity tags, evidence count,
   result status, and agent trace. The result must state when the system abstains.
-- Evidence, ADs, RUL, Graph, and Agent trace tabs show data for the active case where available.
+- Evidence, Triage signals, ADs, RUL, Graph, and Agent trace tabs show data for the active case where available.
   Empty data is explained as unavailable; it must not be presented as a negative finding.
-- The case board lists recent in-memory cases and their ATA/status summary. Selecting a case
-  reloads its result. On page startup, the most recent in-memory case is restored automatically.
-  Case history resets when the API process restarts.
+- The case board lists recent durable local cases with ATA, status, and timestamp. Search matches
+  case ID, description, keyword tags, and ranked ATA chapters; status filters and paging are
+  available. Selecting a case reloads its result. On page startup, the newest case is restored.
+  SQLite preserves history through service restarts.
 - A selected case can be exported as versioned JSON with its analysis payload and explicit
   prototype limitations. Export is a user-initiated local browser download; it is not an approved
   maintenance record.
+- “Revise as new case” copies the selected report into the input form. Analyzing it creates a new
+  case and audit trail; it never overwrites the original.
 - Reviewer controls appear only for a case in `awaiting_approval`; decisions are logged once.
 
 ### Agent map
@@ -45,7 +50,7 @@ procedures.
 
 ### Knowledge graph
 
-- Allow choosing an in-memory case and render one case node, its ranked ATA nodes, and its
+- Allow choosing a stored case and render one case node, its ranked ATA nodes, and its
   deduplicated keyword entity tags.
 - Mouse click, Enter, and Space select a node and update its label, explanation, and source.
 - The legend distinguishes case, ATA ranking, and keyword tag nodes. The page states that source
@@ -105,10 +110,11 @@ procedures.
 ## Acceptance checklist
 
 1. All eight sidebar destinations open directly by hash and update the active navigation state.
-2. Triage can create a case and the graph screen can select and inspect that case's nodes.
-3. RUL can process the included sample CSV and rejects malformed or rising-trend data with a
+2. Triage can create a case, search/filter/paginate case history, and restore a case after restart.
+3. The graph screen can select and inspect any stored case's local triage nodes.
+4. RUL can process the included sample CSV and rejects malformed or rising-trend data with a
    readable error.
-4. Evaluation renders the same metrics returned by the API and identifies its synthetic fixture.
-5. Desktop, tablet, and phone layouts retain readable labels, working controls, and visible focus.
-6. No screen implies access to operator records, approved aircraft configuration, regulatory
+5. Evaluation renders the same metrics returned by the API and identifies its synthetic fixture.
+6. Desktop, tablet, and phone layouts retain readable labels, working controls, and visible focus.
+7. No screen implies access to operator records, approved aircraft configuration, regulatory
    applicability, validated prognostics, or evidence retrieval that is not implemented.

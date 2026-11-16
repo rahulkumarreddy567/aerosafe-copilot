@@ -4,6 +4,12 @@ import pytest
 from aerosafe.api.main import app
 
 
+@pytest.fixture(autouse=True)
+def isolate_local_stores(tmp_path, monkeypatch):
+    monkeypatch.setenv("AEROSAFE_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
+    monkeypatch.setenv("AEROSAFE_CASES_PATH", str(tmp_path / "cases.sqlite3"))
+
+
 def test_case_flow_and_audit(tmp_path, monkeypatch):
     monkeypatch.setenv("AEROSAFE_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
     c = TestClient(app)
@@ -18,6 +24,7 @@ def test_case_flow_and_audit(tmp_path, monkeypatch):
     assert r["outcome"] == "abstained"
     assert r["evidence"] == []
     assert r["draft"] == []
+    assert r["signals"]
     assert c.get(f"/cases/{r['case_id']}").json()["outcome"] == "abstained"
     assert c.get("/audit/verify").json() == {"intact": True, "first_bad_index": None}
 
@@ -44,14 +51,13 @@ def test_case_decision_is_one_time_only(tmp_path, monkeypatch):
     from aerosafe.api import main
 
     case_id = "case-reviewable"
-    main.CASES[case_id] = {"outcome": "awaiting_approval"}
+    main._case_store().save(case_id, {"outcome": "awaiting_approval"}, "2026-01-01T00:00:00+00:00")
     first = c.post(f"/cases/{case_id}/decision", json={"decision": "reject"})
     second = c.post(f"/cases/{case_id}/decision", json={"decision": "approve"})
     assert first.status_code == 200
     assert first.json()["decision"] == "reject"
     assert second.status_code == 409
-    assert main.CASES[case_id]["decision"] == "reject"
-    del main.CASES[case_id]
+    assert main._case_store().get(case_id)["decision"] == "reject"
 
 
 def test_transcription_reports_missing_optional_dependency(monkeypatch):
@@ -111,6 +117,38 @@ def test_case_graph_is_built_from_real_triage_signals(tmp_path, monkeypatch):
     assert c.get("/cases/unknown/graph").status_code == 404
 
 
+def test_case_history_persists_and_supports_search_filters(tmp_path, monkeypatch):
+    monkeypatch.setenv("AEROSAFE_CASES_PATH", str(tmp_path / "durable.sqlite3"))
+    with TestClient(app) as first_client:
+        created = first_client.post("/cases", json={"text": "Hydraulic pressure drop on landing gear"}).json()
+        case_id = created["case_id"]
+        assert first_client.get("/cases?q=hydraulic&ata=32").json()[0]["case_id"] == case_id
+        assert first_client.get("/cases?outcome=approved").json() == []
+
+    # A fresh app lifespan reopens the same local database, like a service restart.
+    with TestClient(app) as restarted_client:
+        restored = restarted_client.get(f"/cases/{case_id}")
+        assert restored.status_code == 200
+        assert restored.json()["created_at"] == created["created_at"]
+        assert restarted_client.get("/cases?q=landing").json()[0]["case_id"] == case_id
+
+
+def test_case_paging_is_bounded_and_deterministic(tmp_path, monkeypatch):
+    from aerosafe.api import main
+
+    store = main._case_store()
+    for index in range(53):
+        case_id = f"case-page-{index:03d}"
+        store.save(case_id, {"text": f"case {index}", "outcome": "abstained", "ata": []}, f"2026-01-01T00:00:{index:02d}+00:00")
+    c = TestClient(app)
+    first = c.get("/cases?limit=50")
+    second = c.get("/cases?limit=50&offset=50")
+    assert first.status_code == second.status_code == 200
+    assert len(first.json()) == 50
+    assert len(second.json()) == 3
+    assert c.get("/cases?limit=101").status_code == 422
+
+
 def test_rul_csv_endpoint_and_evaluation_endpoints():
     c = TestClient(app)
     response = c.post(
@@ -128,6 +166,8 @@ def test_rul_csv_endpoint_and_evaluation_endpoints():
     assert evaluation["sample_count"] == 14
     assert evaluation["accuracy"] == 1
     assert evaluation["macro_f1"] == 1
+    assert evaluation["top3_accuracy"] == 1
+    assert sum(map(sum, evaluation["confusion_matrix"]["rows"])) == evaluation["sample_count"]
     assert "synthetic" in evaluation["warning"].lower()
     dataset = c.get("/evaluation/data")
     assert dataset.status_code == 200

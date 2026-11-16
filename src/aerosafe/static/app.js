@@ -33,6 +33,9 @@ let activeCase = null;
 let activeView = "triage";
 let activeResultTab = "evidence";
 let speechMode = false;
+let caseOffset = 0;
+const casePageSize = 50;
+let caseSearchTimer = null;
 
 async function request(path, options = {}) {
   const response = await fetch(path, options);
@@ -139,6 +142,9 @@ function renderCase(result, usedSpeech = false) {
     ? `ATA ${result.ata[0][0]} · ${result.ata[0][1]}`
     : "Triage complete · no ATA match";
   byId("result-subtitle").textContent = result.case_id || "Current analysis";
+  byId("case-description").textContent = result.text || "No description was saved for this case.";
+  byId("case-created-at").textContent = result.created_at ? `Created ${new Date(result.created_at).toLocaleString()}` : "Creation time unavailable";
+  byId("revise-case").disabled = !result.text;
   byId("export-case").disabled = false;
   const status = result.decision || result.outcome || "unknown";
   const statusPill = byId("result-status");
@@ -190,6 +196,15 @@ function exportActiveCase() {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function reviseActiveCase() {
+  if (!activeCase?.text) return;
+  byId("case-text").value = activeCase.text;
+  byId("case-text").focus();
+  byId("revise-note").textContent = "Review or edit this text, then Analyze to create a separate case. The selected case will remain unchanged.";
+  byId("revise-note").hidden = false;
+  byId("case-form").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 function renderResultTab(tabName) {
   activeResultTab = tabName;
   document.querySelectorAll(".result-tab").forEach((tab) => {
@@ -219,6 +234,29 @@ function renderResultTab(tabName) {
     return;
   }
 
+  if (tabName === "signals") {
+    const signals = result.signals || [];
+    if (!signals.length) {
+      content.append(node("div", "data-empty", "No ATA keyword signals matched this description. This is not a finding that the aircraft has no defect."));
+      return;
+    }
+    content.append(node("p", "signal-method-note", "Relative match share is a normalized count of matched baseline phrases. It is not probability, confidence, severity, or a diagnosis."));
+    signals.forEach((signal) => {
+      const card = node("article", "signal-card");
+      const head = node("div", "signal-card-head");
+      head.append(node("strong", "", `#${signal.rank} · ATA ${signal.ata} · ${signal.name}`), node("span", "signal-score", `${Math.round(signal.relative_match_share * 100)}% match share`));
+      const meter = node("div", "signal-meter");
+      const fill = node("span");
+      fill.style.width = `${Math.min(100, Math.max(0, signal.relative_match_share * 100))}%`;
+      meter.append(fill);
+      const terms = node("div", "signal-terms");
+      (signal.matched_terms || []).forEach(({ term, count }) => terms.append(node("span", "signal-term", `${term} · ${count}`)));
+      card.append(head, meter, terms);
+      content.append(card);
+    });
+    return;
+  }
+
   if (tabName === "directives") {
     const directives = result.ad_results || [];
     if (!directives.length) {
@@ -239,7 +277,29 @@ function renderResultTab(tabName) {
   }
 
   if (tabName === "graph") {
-    content.append(node("div", "data-empty", "No graph path is available. Graph retrieval is not implemented."));
+    content.append(node("div", "data-empty", "Loading the case-local keyword graph…"));
+    const caseId = result.case_id;
+    if (!caseId) {
+      content.replaceChildren(node("div", "data-empty", "Save a case before viewing its graph."));
+      return;
+    }
+    request(`/cases/${encodeURIComponent(caseId)}/graph`).then((graph) => {
+      if (activeResultTab !== "graph" || activeCase?.case_id !== caseId) return;
+      content.replaceChildren();
+      content.append(node("p", "signal-method-note", `Case-local graph · ${graph.nodes.length} nodes · ${graph.edges.length} links · source: ${graph.source}`));
+      const list = node("div", "graph-preview-list");
+      graph.nodes.forEach((item) => {
+        const chip = node("div", `graph-preview-node ${item.kind}`);
+        chip.append(node("strong", "", item.label), node("small", "", item.detail));
+        list.append(chip);
+      });
+      content.append(list);
+      const link = node("a", "graph-preview-link", "Open interactive graph view →");
+      link.href = "#graph";
+      content.append(link);
+    }).catch((error) => {
+      if (activeResultTab === "graph" && activeCase?.case_id === caseId) content.replaceChildren(node("div", "data-empty", `Graph unavailable: ${error.message}`));
+    });
     return;
   }
 
@@ -259,27 +319,41 @@ function renderResultTab(tabName) {
   }
 }
 
-async function loadCases(restoreLatest = false) {
+async function loadCases(restoreLatest = false, append = false) {
   const list = byId("case-list");
   try {
-    const cases = await request("/cases");
-    byId("case-count").textContent = String(cases.length);
-    list.replaceChildren();
-    if (!cases.length) {
-      list.append(node("div", "case-list-empty", "No cases yet"));
+    const params = new URLSearchParams({ limit: String(casePageSize), offset: String(append ? caseOffset : 0) });
+    const query = byId("case-search").value.trim();
+    const outcome = byId("case-status-filter").value;
+    if (query) params.set("q", query);
+    if (outcome) params.set("outcome", outcome);
+    const cases = await request(`/cases?${params}`);
+    if (!append) {
+      caseOffset = 0;
+      list.replaceChildren();
+    }
+    caseOffset += cases.length;
+    byId("case-count").textContent = String(caseOffset);
+    if (!caseOffset && !append) {
+      const hasFilters = query || outcome;
+      list.append(node("div", "case-list-empty", hasFilters ? "No cases match these filters." : "No cases yet"));
+      byId("case-load-more").hidden = true;
       return;
     }
-    cases.slice(0, 12).forEach((item) => {
+    cases.forEach((item) => {
       const ata = item.ata?.[0];
       const row = node("button", `case-row ${item.outcome || ""}${activeCase?.case_id === item.case_id ? " selected" : ""}`);
       row.type = "button";
       row.dataset.caseId = item.case_id;
+      row.title = item.text || item.case_id;
       const title = node("span", "case-row-title", item.case_id);
-      title.append(node("small", "", ata ? `ATA ${ata[0]}` : "ATA —"));
+      const timestamp = item.created_at ? new Date(item.created_at).toLocaleString() : "";
+      title.append(node("small", "", [ata ? `ATA ${ata[0]}` : "ATA —", timestamp].filter(Boolean).join(" · ")));
       const label = (item.outcome || "unknown").replaceAll("_", " ").toUpperCase();
       row.append(title, node("span", "case-row-status", label));
       list.append(row);
     });
+    byId("case-load-more").hidden = cases.length < casePageSize;
     if (restoreLatest && !activeCase && cases.length) {
       await loadCase(cases[0].case_id);
     }
@@ -287,6 +361,13 @@ async function loadCases(restoreLatest = false) {
     list.replaceChildren(node("div", "case-list-empty", `Could not load cases: ${error.message}`));
   }
 }
+
+byId("case-search").addEventListener("input", () => {
+  window.clearTimeout(caseSearchTimer);
+  caseSearchTimer = window.setTimeout(() => loadCases(), 250);
+});
+byId("case-status-filter").addEventListener("change", () => loadCases());
+byId("case-load-more").addEventListener("click", () => loadCases(false, true));
 
 async function loadCase(caseId) {
   try {
@@ -470,6 +551,7 @@ async function loadEvaluation() {
     const result = await request("/evaluation");
     byId("evaluation-macro-f1").textContent = result.macro_f1 === null ? "—" : result.macro_f1.toFixed(3);
     byId("evaluation-accuracy").textContent = result.accuracy === null ? "—" : result.accuracy.toFixed(3);
+    byId("evaluation-top3").textContent = result.top3_accuracy === null ? "—" : result.top3_accuracy.toFixed(3);
     byId("evaluation-samples").textContent = String(result.sample_count);
     byId("evaluation-sample-count").textContent = `${result.sample_count} synthetic examples`;
     byId("evaluation-warning").textContent = result.warning;
@@ -480,10 +562,38 @@ async function loadEvaluation() {
       [item.ata, String(item.support), item.precision.toFixed(3), item.recall.toFixed(3), item.f1.toFixed(3)].forEach((value) => row.append(node("td", "", value)));
       rows.append(row);
     });
+    const matrixHead = byId("confusion-head");
+    const matrixRows = byId("confusion-rows");
+    matrixHead.replaceChildren();
+    matrixRows.replaceChildren();
+    const matrix = result.confusion_matrix || { labels: [], rows: [] };
+    const header = node("tr");
+    const corner = node("th", "", "Expected ↓ / Predicted →");
+    corner.scope = "col";
+    header.append(corner);
+    matrix.labels.forEach((label) => {
+      const cell = node("th", "", label === "__no_match__" ? "No match" : label);
+      cell.scope = "col";
+      header.append(cell);
+    });
+    matrixHead.append(header);
+    matrix.labels.forEach((label, rowIndex) => {
+      const row = node("tr");
+      const labelCell = node("th", "", label === "__no_match__" ? "No match" : label);
+      labelCell.scope = "row";
+      row.append(labelCell);
+      matrix.rows[rowIndex].forEach((count, columnIndex) => {
+        const cell = node("td", count && rowIndex === columnIndex ? "confusion-correct" : count ? "confusion-error" : "", String(count));
+        cell.title = `${count} expected ${label}, predicted ${matrix.labels[columnIndex]}`;
+        row.append(cell);
+      });
+      matrixRows.append(row);
+    });
   } catch (error) {
     byId("evaluation-macro-f1").textContent = "Error";
     byId("evaluation-sample-count").textContent = error.message;
     byId("evaluation-warning").textContent = "Could not load evaluation results.";
+    byId("evaluation-top3").textContent = "—";
   }
 }
 
@@ -583,6 +693,7 @@ async function checkHealth() {
 byId("case-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   setError();
+  byId("revise-note").hidden = true;
   const button = byId("analyze-button");
   const audio = byId("audio-file").files[0];
   let text = byId("case-text").value.trim();
@@ -734,6 +845,7 @@ byId("use-rul-sample").addEventListener("click", async () => {
 });
 
 byId("verify-audit").addEventListener("click", loadAudit);
+byId("revise-case").addEventListener("click", reviseActiveCase);
 byId("export-case").addEventListener("click", exportActiveCase);
 byId("refresh-evaluation").addEventListener("click", loadEvaluation);
 byId("aircraft-map").addEventListener("click", (event) => {

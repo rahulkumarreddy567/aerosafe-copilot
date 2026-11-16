@@ -1,7 +1,9 @@
 """FastAPI app: voice upload, case analysis, human decision, audit verification."""
 import tempfile
 import uuid
+import sqlite3
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from threading import RLock
@@ -15,14 +17,18 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from aerosafe.agents.graph import build_graph
 from aerosafe.agents.case_graph import build_case_graph
 from aerosafe.audit.chain import AuditLog
+from aerosafe.case_store import CaseStore
 from aerosafe.config import get_settings
 from aerosafe.evaluation import EVAL_CSV, evaluate_ata_baseline
 from aerosafe.rul import MAX_SENSOR_CSV_BYTES, SensorCsvError, estimate_rul
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    global CASE_STORE, CASE_STORE_PATH
     settings = get_settings()
     AuditLog(settings.audit_path)
+    CASE_STORE = CaseStore(settings.cases_path)
+    CASE_STORE_PATH = settings.cases_path
     yield
 
 
@@ -31,7 +37,8 @@ app = FastAPI(title="AeroSafe Copilot", version="0.1.0",
 WEB_STATIC = Path(__file__).resolve().parents[1] / "static"
 WEB_INDEX = WEB_STATIC / "index.html"
 app.mount("/static", StaticFiles(directory=WEB_STATIC), name="static")
-CASES: dict[str, dict] = {}
+CASE_STORE: CaseStore | None = None
+CASE_STORE_PATH: str | None = None
 CASES_LOCK = RLock()
 MAX_AUDIO_BYTES = 25 * 1024 * 1024
 MAX_SENSOR_UPLOAD_BYTES = MAX_SENSOR_CSV_BYTES
@@ -44,6 +51,17 @@ def _graph():
 
 def _audit() -> AuditLog:
     return AuditLog(get_settings().audit_path)
+
+
+def _case_store() -> CaseStore:
+    global CASE_STORE, CASE_STORE_PATH
+    path = get_settings().cases_path
+    if CASE_STORE is None or CASE_STORE_PATH != path:
+        with CASES_LOCK:
+            if CASE_STORE is None or CASE_STORE_PATH != path:
+                CASE_STORE = CaseStore(path)
+                CASE_STORE_PATH = path
+    return CASE_STORE
 
 
 class CaseRequest(BaseModel):
@@ -112,47 +130,45 @@ async def transcribe_audio(file: UploadFile):
 def create_case(req: CaseRequest):
     case_id = f"case-{uuid.uuid4().hex}"
     result = _graph().invoke({"text": req.text})
+    created_at = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+    result.update({"case_id": case_id, "created_at": created_at})
     audit = _audit()
     for event in result.get("trace", []):
         audit.append(event["agent"], event["msg"], {"case": case_id})
     audit.append("system", "case_analyzed",
                  {"case": case_id, "outcome": result["outcome"], "retries": result["retries"]})
-    with CASES_LOCK:
-        CASES[case_id] = result
-    return {"case_id": case_id, **result}
+    try:
+        _case_store().save(case_id, result, created_at)
+    except (OSError, sqlite3.Error) as exc:
+        raise HTTPException(500, "Could not save the case to local storage") from exc
+    return result
 
 
 @app.get("/cases")
-def list_cases():
-    with CASES_LOCK:
-        return [
-            {
-                "case_id": case_id,
-                "outcome": {"approve": "approved", "reject": "rejected"}.get(
-                    case.get("decision"), case.get("outcome", "unknown")
-                ),
-                "language": case.get("language"),
-                "ata": case.get("ata", []),
-            }
-            for case_id, case in reversed(list(CASES.items()))
-        ]
+def list_cases(
+    q: str = Query(default="", max_length=200),
+    outcome: Literal["abstained", "awaiting_approval", "approved", "rejected"] | None = None,
+    ata: str = Query(default="", pattern=r"^$|^\d{2}$"),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+):
+    return _case_store().list(query=q, outcome=outcome or "", ata=ata, limit=limit, offset=offset)
 
 
 @app.get("/cases/{case_id}")
 def get_case(case_id: str):
-    with CASES_LOCK:
-        if case_id not in CASES:
-            raise HTTPException(404, "unknown case")
-        return CASES[case_id]
+    case = _case_store().get(case_id)
+    if case is None:
+        raise HTTPException(404, "unknown case")
+    return case
 
 
 @app.get("/cases/{case_id}/graph")
 def case_graph(case_id: str):
-    with CASES_LOCK:
-        case = CASES.get(case_id)
-        if not case:
-            raise HTTPException(404, "unknown case")
-        return build_case_graph(case_id, case)
+    case = _case_store().get(case_id)
+    if not case:
+        raise HTTPException(404, "unknown case")
+    return build_case_graph(case_id, case)
 
 
 @app.post("/rul/analyze")
@@ -181,7 +197,7 @@ def evaluation_data():
 @app.post("/cases/{case_id}/decision")
 def decide(case_id: str, d: Decision):
     with CASES_LOCK:
-        case = CASES.get(case_id)
+        case = _case_store().get(case_id)
         if not case:
             raise HTTPException(404, "unknown case")
         if case["outcome"] != "awaiting_approval":
@@ -192,6 +208,7 @@ def decide(case_id: str, d: Decision):
         case["decision"] = d.decision
         case["reviewer"] = d.reviewer
         case["reviewer_note"] = d.note
+        _case_store().save(case_id, case, case.get("created_at", datetime.now(timezone.utc).isoformat(timespec="seconds")))
         return {"logged_hash": rec["hash"], "decision": d.decision}
 
 

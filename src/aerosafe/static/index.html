@@ -34,7 +34,7 @@
     <div class="main-shell">
       <header class="topbar">
         <div class="topbar-title"><span class="mobile-brand">AeroSafe</span><span id="page-title">New case</span><span class="topbar-context">DEMO CONSOLE</span></div>
-        <div class="topbar-meta"><span class="aircraft-chip">Demo aircraft <b>A320-200</b></span><span class="language-chip">Language <b id="language-label">EN / FR</b></span><span class="service-state"><i id="service-dot"></i><span id="service-label">Connecting</span></span></div>
+        <div class="topbar-meta"><span class="aircraft-chip">Aircraft context <b>not connected</b></span><span class="language-chip">Detected language <b id="language-label">EN / FR</b></span><span class="service-state"><i id="service-dot"></i><span id="service-label">Connecting</span></span></div>
       </header>
 
       <main id="view-root" tabindex="-1">
@@ -57,13 +57,16 @@
                     <span class="file-name" id="file-name">No audio selected</span>
                   </div>
                   <div class="form-error" id="form-error" role="alert" hidden></div>
+                  <div class="revise-note" id="revise-note" role="status" hidden></div>
                   <button class="button button-primary analyze-button" id="analyze-button" type="submit">Analyze</button>
                   <button class="button button-outline unclear-button" id="unclear-button" type="button">Try an unclear case</button>
                 </form>
               </section>
               <section class="cases-section" aria-labelledby="cases-heading">
                 <div class="section-kicker" id="cases-heading">Cases <span id="case-count">0</span></div>
+                <div class="case-filters"><label class="sr-only" for="case-search">Search cases</label><input id="case-search" type="search" placeholder="Search description, ATA, tag…" autocomplete="off"><label class="sr-only" for="case-status-filter">Filter by status</label><select id="case-status-filter"><option value="">All statuses</option><option value="abstained">Abstained</option><option value="awaiting_approval">Awaiting review</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div>
                 <div class="case-list" id="case-list"><div class="case-list-empty">No cases yet</div></div>
+                <button class="case-load-more" id="case-load-more" type="button" hidden>Load more cases</button>
               </section>
             </aside>
 
@@ -78,12 +81,14 @@
                 <div id="case-result" hidden>
                   <div class="result-heading">
                     <div><div class="section-kicker">Triage result</div><h1 id="result-ata">Case analysis</h1><p id="result-subtitle"></p></div>
-                    <div class="result-actions"><button class="button button-outline" id="export-case" type="button" disabled>Export JSON</button><span class="status-pill" id="result-status">ABSTAINED</span></div>
+                    <div class="result-actions"><button class="button button-outline" id="revise-case" type="button" disabled>Revise as new case</button><button class="button button-outline" id="export-case" type="button" disabled>Export JSON</button><span class="status-pill" id="result-status">ABSTAINED</span></div>
                   </div>
+                  <div class="case-description"><span>Reported description</span><p id="case-description"></p><small id="case-created-at"></small></div>
                   <div class="result-notice" id="result-notice"></div>
                   <div class="result-summary" id="result-summary"></div>
                   <div class="result-tabs" role="tablist" aria-label="Case details">
                     <button class="result-tab active" role="tab" aria-selected="true" type="button" data-result-tab="evidence">Evidence</button>
+                    <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="signals">Triage signals</button>
                     <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="directives">ADs</button>
                     <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="rul">RUL</button>
                     <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="graph">Graph</button>
@@ -113,7 +118,7 @@
         </section>
 
         <section class="view subview" data-view-panel="parts" hidden>
-          <div class="view-heading"><div><div class="section-kicker">Aircraft systems map</div><h1>Parts map</h1><p>ATA chapter overview for the selected aircraft.</p></div><span class="status-pill status-pill-muted">Illustrative</span></div>
+          <div class="view-heading"><div><div class="section-kicker">Illustrative systems map</div><h1>Parts map</h1><p>ATA chapter overview. No aircraft configuration is connected.</p></div><span class="status-pill status-pill-muted">Illustrative</span></div>
           <div class="feature-grid"><div class="feature-card aircraft-map-card"><div class="aircraft-map" id="aircraft-map"></div><p class="map-caption">Illustrative system map only. It is not an aircraft configuration or maintenance record.</p></div><aside class="feature-card feature-aside"><div class="section-kicker">Selected system</div><h2 id="part-selected">Select an ATA chapter</h2><p id="part-detail">The keyword baseline can rank a few ATA chapters from the defect text. Aircraft parts and open case counts are not connected.</p><div class="ata-list" id="ata-list"></div></aside></div>
           <div class="feature-card phase-card"><div class="section-kicker">Flight phase</div><h2>Flight phase tagging</h2><p id="phase-note">No case selected. Phase entities are detected by keyword only.</p><div class="phase-track"><span>Taxi</span><span>Takeoff</span><span>Climb</span><span>Cruise</span><span>Approach</span><span>Landing</span></div></div>
         </section>
@@ -140,8 +145,9 @@
         <section class="view subview" data-view-panel="evaluation" hidden>
           <div class="view-heading"><div><div class="section-kicker">Baseline scorecard</div><h1>Evaluation</h1><p>Reproducible metrics from the included synthetic ATA smoke set.</p></div><button class="button button-outline" id="refresh-evaluation" type="button">Refresh results</button></div>
           <div class="evaluation-banner"><strong>Synthetic sanity check</strong><span>These examples verify basic keyword behavior. They are not operational data, a held-out benchmark, or evidence of real-world performance.</span></div>
-          <div class="metric-grid"><article class="feature-card metric-card metric-primary"><span>ATA macro-F1</span><strong id="evaluation-macro-f1">Loading…</strong><small id="evaluation-sample-count">Calculating baseline</small></article><article class="feature-card metric-card"><span>Accuracy</span><strong id="evaluation-accuracy">—</strong><small>On the synthetic set</small></article><article class="feature-card metric-card"><span>Samples</span><strong id="evaluation-samples">—</strong><small>Explicitly labeled rows</small></article></div>
+          <div class="metric-grid"><article class="feature-card metric-card metric-primary"><span>ATA macro-F1</span><strong id="evaluation-macro-f1">Loading…</strong><small id="evaluation-sample-count">Calculating baseline</small></article><article class="feature-card metric-card"><span>Top-1 accuracy</span><strong id="evaluation-accuracy">—</strong><small>On the synthetic set</small></article><article class="feature-card metric-card"><span>Top-3 coverage</span><strong id="evaluation-top3">—</strong><small>Expected ATA appears in ranked top three</small></article><article class="feature-card metric-card"><span>Samples</span><strong id="evaluation-samples">—</strong><small>Explicitly labeled rows</small></article></div>
           <div class="feature-card evaluation-card"><div class="evaluation-table-head"><div><h2>ATA baseline by class</h2><p id="evaluation-warning">Loading evaluation details…</p></div><a href="/evaluation/data" id="evaluation-data-link">Download labeled sample set</a></div><div class="audit-table-wrap"><table class="audit-table evaluation-table"><thead><tr><th>ATA</th><th>Samples</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead><tbody id="evaluation-rows"><tr><td colspan="5" class="table-empty">Loading results…</td></tr></tbody></table></div></div>
+          <div class="feature-card evaluation-card"><div class="evaluation-table-head"><div><h2>Top-1 confusion matrix</h2><p>Rows are expected chapters; columns are predicted chapters. Values count synthetic examples.</p></div></div><div class="audit-table-wrap"><table class="audit-table confusion-table" aria-label="Top-1 confusion matrix for synthetic ATA examples"><thead id="confusion-head"></thead><tbody id="confusion-rows"><tr><td class="table-empty">Loading matrix…</td></tr></tbody></table></div></div>
           <div class="feature-card evaluation-card evaluation-gaps"><h2>Next evaluation inputs</h2><ul><li><strong>Retrieval recall@k:</strong> relevance-labeled maintenance queries and passages.</li><li><strong>RUL error:</strong> run-to-failure sensor records with a held-out split.</li><li><strong>Claim support:</strong> claims annotated against approved source passages.</li><li><strong>Speech WER:</strong> reference transcripts paired with representative audio.</li></ul><p>These measures stay unavailable until both the data and corresponding feature are implemented.</p><code>python eval/wer.py eval/aviation_phrases.csv</code></div>
         </section>
       </main>

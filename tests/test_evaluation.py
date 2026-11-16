@@ -18,6 +18,8 @@ def test_macro_f1_includes_missed_and_out_of_set_predictions():
     assert classes["32"]["recall"] == 0
     assert classes["71"]["support"] == 0
     assert classes["__no_match__"]["support"] == 0
+    assert result["confusion_matrix"]["labels"] == ["29", "32", "71", "__no_match__"]
+    assert sum(map(sum, result["confusion_matrix"]["rows"])) == 4
 
 
 def test_empty_scores_and_length_validation():
@@ -26,6 +28,7 @@ def test_empty_scores_and_length_validation():
         "accuracy": None,
         "macro_f1": None,
         "per_class": [],
+        "confusion_matrix": {"labels": [], "rows": []},
     }
     with pytest.raises(ValueError, match="equal lengths"):
         score_predictions(["29"], [])

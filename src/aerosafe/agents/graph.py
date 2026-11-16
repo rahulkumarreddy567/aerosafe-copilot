@@ -17,6 +17,7 @@ class CaseState(TypedDict, total=False):
     text: str
     language: str
     ata: list
+    signals: list
     entities: list
     evidence: list          # [{"id": "[1]", "source": "ASRS", "text": "..."}]
     ad_results: list        # [{"id": "AD-2", "status": "needs_review"}]
@@ -35,7 +36,7 @@ def _log(state: CaseState, agent: str, msg: str) -> list:
 
 def triage_node(state: CaseState) -> CaseState:
     r = nlp.analyze(state["text"])
-    return {"language": r.language, "ata": r.ata, "entities": r.entities,
+    return {"language": r.language, "ata": r.ata, "entities": r.entities, "signals": r.signals,
             "retries": state.get("retries", 0), "trace": _log(state, "triage", f"ATA {r.ata[:1]}")}
 
 
