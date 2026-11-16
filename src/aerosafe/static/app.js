@@ -234,7 +234,7 @@ function renderResultTab(tabName) {
   }
 }
 
-async function loadCases() {
+async function loadCases(restoreLatest = false) {
   const list = byId("case-list");
   try {
     const cases = await request("/cases");
@@ -255,6 +255,9 @@ async function loadCases() {
       row.append(title, node("span", "case-row-status", label));
       list.append(row);
     });
+    if (restoreLatest && !activeCase && cases.length) {
+      await loadCase(cases[0].case_id);
+    }
   } catch (error) {
     list.replaceChildren(node("div", "case-list-empty", `Could not load cases: ${error.message}`));
   }
@@ -727,5 +730,5 @@ window.addEventListener("hashchange", () => setView(window.location.hash.slice(1
 renderAgents();
 renderWorkflow();
 checkHealth();
-loadCases();
+loadCases(true);
 setView(window.location.hash.slice(1) || "triage");

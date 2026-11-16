@@ -29,7 +29,8 @@ procedures.
 - Evidence, ADs, RUL, Graph, and Agent trace tabs show data for the active case where available.
   Empty data is explained as unavailable; it must not be presented as a negative finding.
 - The case board lists recent in-memory cases and their ATA/status summary. Selecting a case
-  reloads its result. Case history resets when the API process restarts.
+  reloads its result. On page startup, the most recent in-memory case is restored automatically.
+  Case history resets when the API process restarts.
 - Reviewer controls appear only for a case in `awaiting_approval`; decisions are logged once.
 
 ### Agent map
