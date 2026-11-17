@@ -416,7 +416,7 @@ function renderWorkflow() {
     ["05", "Predictive maintenance", "RUL model · not implemented", "stub"],
     ["06", "Draft", "Local recommendation model · not implemented", "stub"],
     ["07", "Verifier", "Claim support check · not implemented", "stub"],
-    ["08", "Human approval", "Held while evidence is unavailable", "stub"],
+    ["08", "Human approval", "Held while evidence is unavailable", "held"],
   ];
   nodes.forEach(([index, title, detail, state]) => {
     const item = node("article", `workflow-node ${state}`);
@@ -448,13 +448,12 @@ function renderCaseGraph(graph) {
   stage.replaceChildren();
   const ataNodes = graph.nodes.filter((item) => item.kind === "ata");
   const tagNodes = graph.nodes.filter((item) => item.kind !== "case" && item.kind !== "ata");
-  const shownTags = tagNodes.slice(0, 8);
-  const visibleNodes = [...graph.nodes.filter((item) => item.kind === "case" || item.kind === "ata"), ...shownTags];
-  const height = Math.max(430, (Math.max(ataNodes.length, shownTags.length, 1) + 1) * 84);
+  const visibleNodes = graph.nodes;
+  const height = Math.max(430, (Math.max(ataNodes.length, tagNodes.length, 1) + 1) * 84);
   const positions = new Map();
   positions.set("case", { x: 145, y: height / 2 });
   ataNodes.forEach((item, index) => positions.set(item.id, { x: 450, y: ((index + 1) * height) / (ataNodes.length + 1) }));
-  shownTags.forEach((item, index) => positions.set(item.id, { x: 770, y: ((index + 1) * height) / (shownTags.length + 1) }));
+  tagNodes.forEach((item, index) => positions.set(item.id, { x: 770, y: ((index + 1) * height) / (tagNodes.length + 1) }));
 
   const svg = svgElement("svg", {
     viewBox: `0 0 930 ${height}`,
@@ -497,7 +496,7 @@ function renderCaseGraph(graph) {
   });
   stage.append(svg);
   byId("graph-count").textContent = `${graph.nodes.length} nodes · ${graph.edges.length} links`;
-  byId("graph-limitations").textContent = graph.limitations + (tagNodes.length > shownTags.length ? ` Showing ${shownTags.length} of ${tagNodes.length} keyword tags.` : "");
+  byId("graph-limitations").textContent = graph.limitations;
   showGraphNode(graph.nodes[0], graph);
 }
 
@@ -506,7 +505,13 @@ async function loadCaseGraph(caseId = activeCase?.case_id) {
   const empty = byId("graph-empty");
   byId("graph-count").textContent = "Loading case graph…";
   try {
-    const cases = await request("/cases");
+    const cases = [];
+    const pageSize = 100;
+    for (let offset = 0; ; offset += pageSize) {
+      const page = await request(`/cases?limit=${pageSize}&offset=${offset}`);
+      cases.push(...page);
+      if (page.length < pageSize) break;
+    }
     selector.replaceChildren(node("option", "", "Choose a case"));
     selector.options[0].value = "";
     cases.forEach((item) => {

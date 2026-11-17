@@ -18,6 +18,9 @@ procedures.
 - The desktop palette uses midnight blue for navigation, white elevated cards for work areas,
   cool gray blue page surfaces, teal for active/healthy states, amber for review or unavailable
   states, and red for rejected or error states.
+- Cards, workflow stages, and aircraft map markers use restrained layered depth and short hover
+  lift/tilt interactions on pointer devices. Touch layouts remain static and reduced-motion settings
+  disable these transitions.
 
 ## Screens and interactions
 
@@ -31,8 +34,9 @@ procedures.
 - Evidence, Triage signals, ADs, RUL, Graph, and Agent trace tabs show data for the active case where available.
   Empty data is explained as unavailable; it must not be presented as a negative finding.
 - The case board lists recent durable local cases with ATA, status, and timestamp. Search matches
-  case ID, description, keyword tags, and ranked ATA chapters; status filters and paging are
-  available. Selecting a case reloads its result. On page startup, the newest case is restored.
+  case ID, description, keyword tags, ranked ATA chapters, and user-entered aircraft/component
+  context; status filters and paging are available. Selecting a case reloads its result. On page
+  startup, the newest case is restored.
   SQLite preserves history through service restarts.
 - A selected case can be exported as versioned JSON with its analysis payload and explicit
   prototype limitations. Export is a user-initiated local browser download; it is not an approved
@@ -55,8 +59,8 @@ procedures.
 
 ### Knowledge graph
 
-- Allow choosing a stored case and render one case node, its ranked ATA nodes, and its
-  deduplicated keyword entity tags.
+- Allow choosing any stored case, including cases beyond the first 100, and render one case node,
+  its ranked ATA nodes, and all of its deduplicated keyword entity tags.
 - Mouse click, Enter, and Space select a node and update its label, explanation, and source.
 - The legend distinguishes case, ATA ranking, and keyword tag nodes. The page states that source
   reports, directives, configuration, and external graph data are not connected.

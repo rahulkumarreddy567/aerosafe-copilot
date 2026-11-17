@@ -186,3 +186,19 @@ main{padding-top:30px}
 .context-details{margin:12px 0 14px;border:1px solid #e3eaf0;border-radius:10px;background:#f7f9fa;padding:10px 12px;color:#46535e}.context-details summary{cursor:pointer;font-size:12px;font-weight:700}.context-details summary span{float:right;color:#788796;font-size:10px;text-transform:uppercase;letter-spacing:.06em}.context-details>p{margin:8px 0 10px;color:#727d86;font-size:10px;line-height:1.5}.context-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.context-grid label{display:grid;gap:4px;color:#66737d;font-size:10px;font-weight:650}.context-grid input{width:100%;min-width:0;padding:8px;border:1px solid #d9e2e9;border-radius:7px;background:#fff;color:#26313a;font-size:11px}.context-grid input:focus{outline:0;border-color:#53a6a0;box-shadow:0 0 0 3px #53a6a01f}.aircraft-context-result{margin:6px 24px 12px;padding:11px 14px;border:1px solid #dce7e9;border-radius:9px;background:#f4f8f7;color:#53626a;font-size:11px}.aircraft-context-result[hidden]{display:none}.aircraft-context-result>strong{color:#355f62;font-size:10px;text-transform:uppercase;letter-spacing:.06em}.context-result-list{display:grid;grid-template-columns:max-content 1fr;gap:5px 12px;margin:9px 0 0}.context-result-list dt{color:#77838a}.context-result-list dd{margin:0;color:#303d44;font-weight:650;overflow-wrap:anywhere}
 @media(max-width:560px){.context-grid{grid-template-columns:1fr}.aircraft-context-result{margin-left:12px;margin-right:12px}}
 @media(max-width:560px){.triage-grid{display:flex;flex-direction:column;width:100%;min-width:0}.entry-column{display:flex;flex-direction:column;width:100%;min-width:0;gap:16px}.entry-card,.cases-section,.analysis-column,.analysis-panel{width:100%;min-width:0;max-width:100%}.entry-card form{width:100%;min-width:0}.entry-card textarea{display:block;width:100%;min-width:0;max-width:100%}.analysis-column{flex:0 0 auto}}
+
+/* Subtle 3D depth: cards rise and tilt slightly on pointer devices, while touch layouts stay still. */
+.brand-mark{transform:perspective(180px) rotateY(-12deg) rotateX(7deg);transform-style:preserve-3d;box-shadow:4px 5px 0 #10233e,0 10px 18px #0c1e343b}
+.entry-card,.cases-section,.analysis-panel,.feature-card,.workflow-card{transform-style:preserve-3d;transition:transform .24s cubic-bezier(.2,.75,.25,1),box-shadow .24s ease}
+.workflow-node{transform-style:preserve-3d;transition:transform .2s ease,box-shadow .2s ease}
+.workflow-node.held{border-color:#e4b4ad;background:linear-gradient(145deg,#fff8f6,#f8e9e7);box-shadow:inset 0 1px #fff,0 5px 12px #a14e3c12}
+.aircraft-map svg{filter:drop-shadow(0 14px 14px #243a501c)}
+.ata-hotspot circle{filter:drop-shadow(0 3px 2px #142b482b);transition:filter .2s,transform .2s}
+.ata-hotspot:hover circle,.ata-hotspot:focus circle{filter:drop-shadow(0 6px 4px #142b4840)}
+.graph-node rect{filter:drop-shadow(0 7px 5px #1c3a5827);transition:filter .2s}
+.graph-node:hover rect,.graph-node:focus rect{filter:drop-shadow(0 12px 8px #1c3a5840)}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .entry-card:hover,.cases-section:hover,.analysis-panel:hover,.feature-card:hover,.workflow-card:hover{transform:perspective(1400px) rotateX(.45deg) rotateY(-.35deg) translateY(-2px);box-shadow:0 20px 44px #19385616}
+  .workflow-node:hover{transform:perspective(700px) rotateX(2deg) rotateY(-2deg) translateY(-3px);box-shadow:0 12px 20px #19385618}
+}
+@media(prefers-reduced-motion:reduce){.entry-card,.cases-section,.analysis-panel,.feature-card,.workflow-card,.workflow-node,.ata-hotspot circle{transition:none!important}}

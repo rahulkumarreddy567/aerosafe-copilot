@@ -56,8 +56,9 @@ confidence or probability.
   ATA rankings, and user-supplied context values. Newest cases appear first.
 - `GET /cases/{case_id}` returns the saved analysis payload; `GET /cases/{case_id}/graph` rebuilds
   the graph from that payload after restart. Missing IDs return 404.
-- The browser supports search, status filter, 50-case pages, clear no-result states, and restores the
-  newest case on first load. Filtering must not submit or mutate case data.
+- The browser supports search (including user-entered aircraft/component context), status filter,
+  50-case pages, clear no-result states, and restores the newest case on first load. Filtering must
+  not submit or mutate case data.
 - Case JSON export format `aerosafe-case-export/v1` includes export timestamp, ID, payload, and
   explicit limits. Exporting creates a local download and does not transmit case data.
 - Revising a selected case pre-fills its original text and user-supplied context but creates a new
@@ -106,7 +107,8 @@ confidence or probability.
 1. Start with Docker Compose and verify a healthy `/health` response.
 2. Create both a matching and a no-match case; confirm each is saved and abstains without evidence.
 3. Restart the API container and confirm case search, detail, and graph still work.
-4. Search by description and ATA, filter by outcome, and page through more than 50 cases.
+4. Search by description, ATA, and aircraft/component context; filter by outcome; page through more
+   than 50 cases; and choose a case beyond the first 100 in the knowledge graph.
 5. Export a case and validate its schema version, timestamp, ID, saved text, and limitations.
 6. Confirm signal-share math with overlapping and unmatched keywords.
 7. Confirm top-1, top-3, class metrics, and confusion-matrix total against the exact CSV fixture.
