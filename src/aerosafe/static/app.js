@@ -144,6 +144,7 @@ function renderCase(result, usedSpeech = false) {
   byId("result-subtitle").textContent = result.case_id || "Current analysis";
   byId("case-description").textContent = result.text || "No description was saved for this case.";
   byId("case-created-at").textContent = result.created_at ? `Created ${new Date(result.created_at).toLocaleString()}` : "Creation time unavailable";
+  renderAircraftContext(result.aircraft_context);
   byId("revise-case").disabled = !result.text;
   byId("export-case").disabled = false;
   const status = result.decision || result.outcome || "unknown";
@@ -169,6 +170,21 @@ function renderCase(result, usedSpeech = false) {
   renderResultTab(activeResultTab);
   if (result.case_id) {
     byId("language-label").textContent = (result.language || "EN").toUpperCase();
+  }
+}
+
+function renderAircraftContext(context) {
+  const target = byId("aircraft-context-result");
+  const fields = context?.fields || {};
+  const labels = { aircraft_model: "Aircraft model", aircraft_serial: "Aircraft serial / MSN", component: "Component", part_number: "Part number", component_serial: "Component serial" };
+  const entries = Object.entries(labels).filter(([key]) => fields[key]);
+  target.replaceChildren();
+  target.hidden = false;
+  target.append(node("strong", "", entries.length ? "User supplied · not verified" : "No aircraft or component details provided"));
+  if (entries.length) {
+    const list = node("dl", "context-result-list");
+    entries.forEach(([key, label]) => list.append(node("dt", "", label), node("dd", "", fields[key])));
+    target.append(list);
   }
 }
 
@@ -199,6 +215,12 @@ function exportActiveCase() {
 function reviseActiveCase() {
   if (!activeCase?.text) return;
   byId("case-text").value = activeCase.text;
+  const fields = activeCase.aircraft_context?.fields || {};
+  byId("aircraft-model").value = fields.aircraft_model || "";
+  byId("aircraft-serial").value = fields.aircraft_serial || "";
+  byId("component-name").value = fields.component || "";
+  byId("part-number").value = fields.part_number || "";
+  byId("component-serial").value = fields.component_serial || "";
   byId("case-text").focus();
   byId("revise-note").textContent = "Review or edit this text, then Analyze to create a separate case. The selected case will remain unchanged.";
   byId("revise-note").hidden = false;
@@ -348,7 +370,9 @@ async function loadCases(restoreLatest = false, append = false) {
       row.title = item.text || item.case_id;
       const title = node("span", "case-row-title", item.case_id);
       const timestamp = item.created_at ? new Date(item.created_at).toLocaleString() : "";
-      title.append(node("small", "", [ata ? `ATA ${ata[0]}` : "ATA —", timestamp].filter(Boolean).join(" · ")));
+      const context = item.aircraft_context?.fields || {};
+      const contextLabel = [context.aircraft_model, context.component].filter(Boolean).join(" · ");
+      title.append(node("small", "", [ata ? `ATA ${ata[0]}` : "ATA —", contextLabel, timestamp].filter(Boolean).join(" · ")));
       const label = (item.outcome || "unknown").replaceAll("_", " ").toUpperCase();
       row.append(title, node("span", "case-row-status", label));
       list.append(row);
@@ -719,7 +743,13 @@ byId("case-form").addEventListener("submit", async (event) => {
     const result = await request("/cases", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, aircraft_context: {
+        aircraft_model: byId("aircraft-model").value,
+        aircraft_serial: byId("aircraft-serial").value,
+        component: byId("component-name").value,
+        part_number: byId("part-number").value,
+        component_serial: byId("component-serial").value,
+      } }),
     });
     renderCase(result, usedSpeech);
     await loadCases();

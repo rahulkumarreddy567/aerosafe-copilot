@@ -37,8 +37,13 @@ procedures.
 - A selected case can be exported as versioned JSON with its analysis payload and explicit
   prototype limitations. Export is a user-initiated local browser download; it is not an approved
   maintenance record.
-- “Revise as new case” copies the selected report into the input form. Analyzing it creates a new
-  case and audit trail; it never overwrites the original.
+- “Revise as new case” copies the selected report and any user-entered aircraft/component context
+  into the input form. Analyzing it creates a new case and audit trail; it never overwrites the
+  original.
+- An optional expandable form accepts aircraft model, aircraft serial/MSN, component, part number,
+  and component serial. A nearby note says these details are user-entered and unverified and do not
+  affect triage or directive applicability. Results and case rows show supplied details as
+  unverified; blank context has an explicit empty state.
 - Reviewer controls appear only for a case in `awaiting_approval`; decisions are logged once.
 
 ### Agent map

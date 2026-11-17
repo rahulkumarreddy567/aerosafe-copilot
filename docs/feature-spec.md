@@ -25,6 +25,11 @@ baseline evaluation view. These are prototype tools; none can authorize maintena
   case history; a missing ID returns 404.
 - The browser case board provides search, status filtering, and paging. Search is debounced and
   does not create cases. The newest case is restored on initial load when no case is selected.
+- Optional case context includes aircraft model, aircraft serial/MSN, component, part number, and
+  component serial (each at most 100 characters). The API trims values, stores them as
+  `source=user_supplied` and `verified=false`, exposes them in detail/list responses, and indexes
+  them for case search. Blank values are omitted. Revising a case copies these fields into the new
+  case. Context is descriptive only and is not passed into triage or applicability decisions.
 - Storage is local to a single service instance. There is no authentication, multi-user isolation,
   retention policy, backup process, or concurrent multi-worker coordination in this prototype.
 

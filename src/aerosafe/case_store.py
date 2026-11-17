@@ -42,7 +42,8 @@ class CaseStore:
     def _search_text(payload: dict) -> str:
         tags = [value for _, value in payload.get("entities", [])]
         ata = [f"{code} {name}" for code, name, *_ in payload.get("ata", [])]
-        return " ".join([payload.get("text", ""), *tags, *ata]).casefold()
+        context = payload.get("aircraft_context", {}).get("fields", {}).values()
+        return " ".join([payload.get("text", ""), *tags, *ata, *context]).casefold()
 
     def save(self, case_id: str, payload: dict, created_at: str):
         serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
@@ -96,5 +97,6 @@ class CaseStore:
                 "language": payload.get("language"),
                 "ata": payload.get("ata", []),
                 "text": payload.get("text", ""),
+                "aircraft_context": payload.get("aircraft_context"),
             })
         return results

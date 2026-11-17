@@ -51,6 +51,17 @@
                 <form id="case-form">
                   <label class="sr-only" for="case-text">Defect description</label>
                   <textarea id="case-text" maxlength="10000" placeholder="Describe the defect, symptoms and flight phase…"></textarea>
+                  <details class="context-details">
+                    <summary>Aircraft and component details <span>Optional</span></summary>
+                    <p>These details are user-entered and unverified. They do not affect triage or directive applicability.</p>
+                    <div class="context-grid">
+                      <label>Aircraft model<input id="aircraft-model" maxlength="100" placeholder="e.g. A320"></label>
+                      <label>Aircraft serial / MSN<input id="aircraft-serial" maxlength="100" placeholder="Aircraft serial or MSN"></label>
+                      <label>Component<input id="component-name" maxlength="100" placeholder="e.g. hydraulic pump"></label>
+                      <label>Part number<input id="part-number" maxlength="100" placeholder="P/N"></label>
+                      <label>Component serial<input id="component-serial" maxlength="100" placeholder="S/N"></label>
+                    </div>
+                  </details>
                   <div class="audio-row" id="audio-row" hidden>
                     <label class="file-label" for="audio-file">Choose voice note</label>
                     <input id="audio-file" type="file" accept="audio/*">
@@ -84,6 +95,7 @@
                     <div class="result-actions"><button class="button button-outline" id="revise-case" type="button" disabled>Revise as new case</button><button class="button button-outline" id="export-case" type="button" disabled>Export JSON</button><span class="status-pill" id="result-status">ABSTAINED</span></div>
                   </div>
                   <div class="case-description"><span>Reported description</span><p id="case-description"></p><small id="case-created-at"></small></div>
+                  <div class="aircraft-context-result" id="aircraft-context-result" hidden></div>
                   <div class="result-notice" id="result-notice"></div>
                   <div class="result-summary" id="result-summary"></div>
                   <div class="result-tabs" role="tablist" aria-label="Case details">

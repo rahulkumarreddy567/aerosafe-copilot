@@ -64,10 +64,27 @@ def _case_store() -> CaseStore:
     return CASE_STORE
 
 
+class AircraftContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    aircraft_model: str | None = Field(default=None, max_length=100)
+    aircraft_serial: str | None = Field(default=None, max_length=100)
+    component: str | None = Field(default=None, max_length=100)
+    part_number: str | None = Field(default=None, max_length=100)
+    component_serial: str | None = Field(default=None, max_length=100)
+
+    @field_validator("aircraft_model", "aircraft_serial", "component", "part_number", "component_serial")
+    @classmethod
+    def trim_empty_context(cls, value: str | None) -> str | None:
+        value = value.strip() if value else None
+        return value or None
+
+
 class CaseRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str = Field(min_length=1, max_length=10_000)
+    aircraft_context: AircraftContext = Field(default_factory=AircraftContext)
 
     @field_validator("text")
     @classmethod
@@ -130,6 +147,9 @@ async def transcribe_audio(file: UploadFile):
 def create_case(req: CaseRequest):
     case_id = f"case-{uuid.uuid4().hex}"
     result = _graph().invoke({"text": req.text})
+    context_fields = req.aircraft_context.model_dump(exclude_none=True)
+    if context_fields:
+        result["aircraft_context"] = {"source": "user_supplied", "verified": False, "fields": context_fields}
     created_at = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
     result.update({"case_id": case_id, "created_at": created_at})
     audit = _audit()

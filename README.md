@@ -13,7 +13,7 @@ Inference runs locally; Whisper downloads its model on first use and then caches
 | Part | Status |
 |---|---|
 | FastAPI service (`/cases`, `/transcribe`, guarded reviewer endpoint, audit verification) | Working; ordinary triage remains abstained |
-| Durable case library | SQLite-backed; search, ATA/status filters, paging, and restart persistence |
+| Durable case library | SQLite-backed; search (including optional user-entered aircraft/component notes), ATA/status filters, paging, and restart persistence |
 | LangGraph pipeline with a bounded retry loop | Working; currently fails closed and abstains because retrieval and verification are not implemented |
 | Hash-chained audit log with tamper detection | Working, tested |
 | Whisper speech-to-text (local, faster-whisper, FR/EN auto-detect) | Docker includes the speech extra; local installs need it |
@@ -58,6 +58,9 @@ curl -s 'localhost:8000/cases?q=hydraulic&ata=29&limit=20'
 
 Until real retrieval and claim verification are implemented, `/cases` returns an abstention
 with no recommendation. This is intentional: placeholder evidence must not be treated as support.
+Cases may include optional aircraft model/serial and component/part/serial notes. These values are
+stored as user-supplied and unverified; they do not influence triage or determine directive
+applicability.
 
 ## Interactive graph, RUL, and evaluation
 

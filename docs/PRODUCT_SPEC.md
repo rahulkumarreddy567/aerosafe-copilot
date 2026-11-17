@@ -38,24 +38,30 @@ results. An empty retrieval or directive view means “not evaluated,” never �
 | Audit | Local hash-chain append, verify, and verified-record display | User identity, remote immutable storage, regulated electronic signature |
 | Evaluation | Top-1 accuracy, top-3 coverage, macro-F1, per-class scores, and confusion matrix on the bundled fixture | Fleet performance, held-out results, retrieval quality, verified claim rate, validated RUL accuracy |
 
-The top-level aircraft context must remain “not connected” until a real aircraft profile and
-configuration source are implemented. Keyword shares must not be called confidence or probability.
+The top-level aircraft context remains “not connected”: optional case fields are user-entered notes,
+not a connected aircraft profile or configuration source. They are labeled unverified and are not
+passed to triage, directive applicability, or safety decisions. Keyword shares must not be called
+confidence or probability.
 
 ## Case library requirements
 
 - Every case receives a unique ID and UTC creation timestamp. Case text and analysis payload persist
   in a local SQLite database configured by `AEROSAFE_CASES_PATH`.
+- `POST /cases` optionally accepts aircraft model, aircraft serial/MSN, component, part number,
+  and component serial. Non-empty values are stored under `aircraft_context` with
+  `source=user_supplied` and `verified=false`; values are not sent to triage or used for safety
+  decisions. Each value is trimmed and limited to 100 characters.
 - `GET /cases` accepts `q`, `outcome`, `ata`, `limit`, and `offset`. Query filters are combined with
-  AND semantics; text search matches the case ID, original description, extracted tags, and any of
-  the returned ATA rankings. Newest cases appear first.
+  AND semantics; text search matches the case ID, original description, extracted tags, returned
+  ATA rankings, and user-supplied context values. Newest cases appear first.
 - `GET /cases/{case_id}` returns the saved analysis payload; `GET /cases/{case_id}/graph` rebuilds
   the graph from that payload after restart. Missing IDs return 404.
 - The browser supports search, status filter, 50-case pages, clear no-result states, and restores the
   newest case on first load. Filtering must not submit or mutate case data.
 - Case JSON export format `aerosafe-case-export/v1` includes export timestamp, ID, payload, and
   explicit limits. Exporting creates a local download and does not transmit case data.
-- Revising a selected case pre-fills its original text but creates a new case ID and audit entries;
-  the source record is immutable through this UI action.
+- Revising a selected case pre-fills its original text and user-supplied context but creates a new
+  case ID and audit entries; the source record is immutable through this UI action.
 
 ## Triage signal definitions
 
@@ -111,8 +117,7 @@ configuration source are implemented. Keyword shares must not be called confiden
 
 ## Next implementation priorities
 
-1. Add a real aircraft context form only alongside a documented configuration schema and explicit
-   source provenance.
+1. Integrate an authoritative aircraft configuration source before enabling serial applicability.
 2. Integrate approved read-only source datasets with record IDs, licenses, retrieval citations, and
    a reviewed relevance set before enabling evidence-backed drafts.
 3. Build deterministic directive applicability only after obtaining authoritative directive text

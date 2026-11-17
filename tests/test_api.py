@@ -29,6 +29,36 @@ def test_case_flow_and_audit(tmp_path, monkeypatch):
     assert c.get("/audit/verify").json() == {"intact": True, "first_bad_index": None}
 
 
+def test_case_context_is_saved_searchable_and_not_used_as_triage_input():
+    c = TestClient(app)
+    response = c.post("/cases", json={
+        "text": "hydraulic pressure drop during landing gear retraction",
+        "aircraft_context": {
+            "aircraft_model": " A320 ", "aircraft_serial": " MSN-2048 ",
+            "component": "Hydraulic pump", "part_number": "PN-42", "component_serial": "SN-9",
+        },
+    })
+    assert response.status_code == 200
+    case = response.json()
+    assert case["aircraft_context"] == {
+        "source": "user_supplied", "verified": False,
+        "fields": {
+            "aircraft_model": "A320", "aircraft_serial": "MSN-2048",
+            "component": "Hydraulic pump", "part_number": "PN-42", "component_serial": "SN-9",
+        },
+    }
+    assert c.get(f"/cases/{case['case_id']}").json()["aircraft_context"] == case["aircraft_context"]
+    assert c.get("/cases?q=msn-2048").json()[0]["case_id"] == case["case_id"]
+    assert c.get("/cases?q=pn-42").json()[0]["aircraft_context"] == case["aircraft_context"]
+    assert case["ata"] == c.post("/cases", json={"text": "hydraulic pressure drop during landing gear retraction"}).json()["ata"]
+
+
+def test_case_context_rejects_unknown_fields_and_oversize_values():
+    c = TestClient(app)
+    assert c.post("/cases", json={"text": "defect", "aircraft_context": {"unknown": "x"}}).status_code == 422
+    assert c.post("/cases", json={"text": "defect", "aircraft_context": {"part_number": "x" * 101}}).status_code == 422
+
+
 def test_abstained_case_cannot_be_approved(tmp_path, monkeypatch):
     monkeypatch.setenv("AEROSAFE_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
     c = TestClient(app)
