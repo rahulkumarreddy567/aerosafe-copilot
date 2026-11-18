@@ -2,6 +2,7 @@
 import json
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -51,6 +52,7 @@ class CaseStore:
         status = {"approve": "approved", "reject": "rejected"}.get(status, status)
         rankings = payload.get("ata") or []
         ata_code = ",".join(str(item[0]) for item in rankings)
+        updated_at = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
         with self._connect() as db:
             db.execute("""
                 INSERT INTO cases(case_id, created_at, updated_at, outcome, ata_code, search_text, payload)
@@ -61,7 +63,7 @@ class CaseStore:
                     ata_code=excluded.ata_code,
                     search_text=excluded.search_text,
                     payload=excluded.payload
-            """, (case_id, created_at, created_at, status, ata_code, self._search_text(payload), serialized))
+            """, (case_id, created_at, updated_at, status, ata_code, self._search_text(payload), serialized))
 
     def get(self, case_id: str) -> dict | None:
         with self._connect() as db:

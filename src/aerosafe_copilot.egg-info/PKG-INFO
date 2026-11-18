@@ -3,11 +3,13 @@ Name: aerosafe-copilot
 Version: 0.1.0
 Summary: Multi-agent maintenance and safety-intelligence prototype for aviation (public data only)
 Requires-Python: >=3.10
-Requires-Dist: fastapi>=0.110
+Requires-Dist: fastapi>=0.163.2
 Requires-Dist: uvicorn[standard]>=0.29
 Requires-Dist: pydantic>=2.6
 Requires-Dist: python-multipart>=0.0.9
 Requires-Dist: langgraph>=0.2
+Requires-Dist: openai-agents<1,>=0.25.0
+Requires-Dist: pypdf>=5.0
 Provides-Extra: speech
 Requires-Dist: faster-whisper>=1.0; extra == "speech"
 Provides-Extra: dev

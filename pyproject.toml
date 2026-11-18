@@ -8,11 +8,13 @@ version = "0.1.0"
 description = "Multi-agent maintenance and safety-intelligence prototype for aviation (public data only)"
 requires-python = ">=3.10"
 dependencies = [
-  "fastapi>=0.110",
+  "fastapi>=0.163.2",
   "uvicorn[standard]>=0.29",
   "pydantic>=2.6",
   "python-multipart>=0.0.9",
   "langgraph>=0.2",
+  "openai-agents>=0.25.0,<1",
+  "pypdf>=5.0",
 ]
 
 [project.optional-dependencies]

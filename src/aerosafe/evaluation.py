@@ -4,9 +4,19 @@ from pathlib import Path
 
 from aerosafe.nlp.triage import analyze
 
-EVAL_CSV = Path(__file__).resolve().parents[2] / "eval" / "ata_smoke.csv"
-if not EVAL_CSV.is_file():
-    EVAL_CSV = Path.cwd() / "eval" / "ata_smoke.csv"
+def _find_eval_csv() -> Path:
+    candidates = [
+        Path(__file__).resolve().parents[2] / "eval" / "ata_smoke.csv",
+        Path(__file__).resolve().parents[3] / "eval" / "ata_smoke.csv",
+        Path.cwd() / "eval" / "ata_smoke.csv",
+    ]
+    for p in candidates:
+        if p.is_file():
+            return p
+    return candidates[0]
+
+
+EVAL_CSV = _find_eval_csv()
 
 
 def score_predictions(expected: list[str], predicted: list[str]) -> dict:
@@ -62,7 +72,8 @@ def score_predictions(expected: list[str], predicted: list[str]) -> dict:
 
 
 def evaluate_ata_baseline() -> dict:
-    with EVAL_CSV.open(encoding="utf-8", newline="") as stream:
+    csv_path = EVAL_CSV if EVAL_CSV.is_file() else _find_eval_csv()
+    with csv_path.open(encoding="utf-8", newline="") as stream:
         rows = list(csv.DictReader(stream))
     expected = [row["expected_ata"] for row in rows]
     predicted = []

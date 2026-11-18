@@ -10,6 +10,8 @@ class Settings:
     whisper_compute_type: str
     audit_path: str
     cases_path: str
+    sources_path: str
+    agent_model: str
     max_retries: int
 
 
@@ -27,5 +29,7 @@ def get_settings() -> Settings:
         whisper_compute_type=os.getenv("AEROSAFE_WHISPER_COMPUTE", "int8").strip() or "int8",
         audit_path=os.getenv("AEROSAFE_AUDIT_PATH", "data/audit.jsonl").strip() or "data/audit.jsonl",
         cases_path=os.getenv("AEROSAFE_CASES_PATH", "data/cases.sqlite3").strip() or "data/cases.sqlite3",
+        sources_path=os.getenv("AEROSAFE_SOURCES_PATH", "data/sources.sqlite3").strip() or "data/sources.sqlite3",
+        agent_model=os.getenv("AEROSAFE_AGENT_MODEL", "gpt-6.2-astra").strip() or "gpt-6.2-astra",
         max_retries=max_retries,
     )

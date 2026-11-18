@@ -1,8 +1,14 @@
 README.md
 pyproject.toml
 src/aerosafe/__init__.py
+src/aerosafe/agentic.py
+src/aerosafe/case_store.py
 src/aerosafe/config.py
+src/aerosafe/evaluation.py
+src/aerosafe/rul.py
+src/aerosafe/sources.py
 src/aerosafe/agents/__init__.py
+src/aerosafe/agents/case_graph.py
 src/aerosafe/agents/graph.py
 src/aerosafe/api/__init__.py
 src/aerosafe/api/main.py
@@ -12,6 +18,10 @@ src/aerosafe/nlp/__init__.py
 src/aerosafe/nlp/triage.py
 src/aerosafe/speech/__init__.py
 src/aerosafe/speech/whisper_service.py
+src/aerosafe/static/app.css
+src/aerosafe/static/app.js
+src/aerosafe/static/demo_sensor.csv
+src/aerosafe/static/index.html
 src/aerosafe_copilot.egg-info/PKG-INFO
 src/aerosafe_copilot.egg-info/SOURCES.txt
 src/aerosafe_copilot.egg-info/dependency_links.txt
@@ -19,4 +29,10 @@ src/aerosafe_copilot.egg-info/requires.txt
 src/aerosafe_copilot.egg-info/top_level.txt
 tests/test_api.py
 tests/test_audit_chain.py
+tests/test_config.py
+tests/test_evaluation.py
 tests/test_graph_retry.py
+tests/test_rul.py
+tests/test_sources.py
+tests/test_triage.py
+tests/test_wer.py

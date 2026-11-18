@@ -1,8 +1,10 @@
-fastapi>=0.110
+fastapi>=0.163.2
 uvicorn[standard]>=0.29
 pydantic>=2.6
 python-multipart>=0.0.9
 langgraph>=0.2
+openai-agents<1,>=0.25.0
+pypdf>=5.0
 
 [dev]
 pytest>=8

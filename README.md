@@ -1,9 +1,9 @@
-# AeroSafe Copilot
+# NeuralMech — Agentic Maintenance Investigation Workbench
 
-A maintenance and safety-intelligence **portfolio prototype** for aviation, built on public data.
-It accepts a defect description (typed or spoken, English or French) and returns triage with a
-case trace. Recommendations are disabled until evidence retrieval and verification are implemented.
-Inference runs locally; Whisper downloads its model on first use and then caches it locally.
+A local-first, agentic maintenance-investigation **portfolio prototype** for aviation. It combines
+transparent keyword ATA triage with an optional, bounded OpenAI Agents SDK investigation over
+documents uploaded to a local source library. Agent runs are read-only and return an investigative
+brief with exact source quotations; they do not diagnose or recommend maintenance actions.
 
 > Prototype on public data. Not certified, not connected to any operator system, and not a
 > substitute for approved maintenance procedures.
@@ -12,18 +12,20 @@ Inference runs locally; Whisper downloads its model on first use and then caches
 
 | Part | Status |
 |---|---|
-| FastAPI service (`/cases`, `/transcribe`, guarded reviewer endpoint, audit verification) | Working; ordinary triage remains abstained |
+| FastAPI service (`/cases`, `/sources`, `/transcribe`, audit verification) | Working |
 | Durable case library | SQLite-backed; search (including optional user-entered aircraft/component notes), ATA/status filters, paging, and restart persistence |
 | LangGraph pipeline with a bounded retry loop | Working; currently fails closed and abstains because retrieval and verification are not implemented |
 | Hash-chained audit log with tamper detection | Working, tested |
 | Whisper speech-to-text (local, faster-whisper, FR/EN auto-detect) | Docker includes the speech extra; local installs need it |
 | NLP triage (ATA ranking, entity tags) | Keyword baseline, to be replaced by a fine-tuned model |
 | Triage explainability | Matched phrase counts and relative ATA match share; explicitly not confidence |
-| Evidence retrieval, directive rules, local LLM, entailment verifier | TODO (see roadmap); recommendations remain disabled |
+| Source library | PDF/TXT/MD, bounded extraction, local SQLite, lexical search, source IDs and exact chunks |
+| Agentic investigation | Explicit opt-in; Agents SDK lead and read-only local Evidence Scout, max five turns, structured brief, exact quote check |
+| Directive applicability, aircraft configuration, semantic claim verification | Not implemented; agent brief is not a maintenance decision |
 | Knowledge graph | Working case graph built from keyword triage tags. It does not connect external reports, directives, or aircraft configuration. |
 | RUL view | Working CSV trend explorer with linear threshold-crossing extrapolation. This is a demo estimator, not a trained model or maintenance prediction. |
 | Evaluation view | Top-1 accuracy, top-3 coverage, macro-F1, per-class report, and confusion matrix for a 14-row synthetic smoke set; not a benchmark |
-| Browser console | Triage, case board, agent map, interactive graph, illustrative parts map, directives status, RUL, audit, and evaluation views at `/`. |
+| Browser console | 3D-styled cockpit, case board, agent mesh, local keyword graph, source library, RUL estimator, audit, and evaluation |
 
 ## Quick start
 
@@ -36,15 +38,16 @@ make run                            # http://localhost:8000/docs
 
 Open `http://localhost:8000/` for the browser interface or `/docs` for the API explorer.
 The Docker image installs the speech extra; the local quick start can add it with
-`pip install -e ".[dev,speech]"`.
+`pip install -e ".[dev,speech]"`. Agentic mode uses `OPENAI_API_KEY` and configurable
+`AEROSAFE_AGENT_MODEL` (default `gpt-6.2-astra`). Compose passes the key at runtime; it is not
+stored in the repository. Without the key, local baseline and source features remain available.
 Compose keeps Whisper's downloaded model in a named volume between container restarts. Cases and
 the audit log are stored under `data/` and survive API container restarts. Set
-`AEROSAFE_CASES_PATH` and `AEROSAFE_AUDIT_PATH` to choose alternate local paths.
+`AEROSAFE_CASES_PATH`, `AEROSAFE_SOURCES_PATH`, and `AEROSAFE_AUDIT_PATH` to choose alternate paths.
 
 Docker launch:
 
 ```bash
-cp .env.example .env
 docker compose up --build -d
 docker compose ps
 ```
@@ -56,8 +59,10 @@ curl -s localhost:8000/audit/verify
 curl -s 'localhost:8000/cases?q=hydraulic&ata=29&limit=20'
 ```
 
-Until real retrieval and claim verification are implemented, `/cases` returns an abstention
-with no recommendation. This is intentional: placeholder evidence must not be treated as support.
+`POST /cases` defaults to `mode: "baseline"`. Select `mode: "agentic"` only when you want to send
+the report and matching uploaded-source excerpts to OpenAI. Agent tools are read-only and cannot
+call maintenance systems. Quotes are checked against stored chunks, but this is not semantic claim
+verification. Do not upload controlled, personal, or otherwise restricted data.
 Cases may include optional aircraft model/serial and component/part/serial notes. These values are
 stored as user-supplied and unverified; they do not influence triage or determine directive
 applicability.

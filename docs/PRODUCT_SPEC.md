@@ -32,6 +32,8 @@ results. An empty retrieval or directive view means “not evaluated,” never �
 |---|---|---|
 | Triage | English/French hint, ATA keyword ranking, matched terms, basic symptom/component/phase tags | Calibrated probability, fault diagnosis, severity, aircraft-specific result |
 | Case library | Local SQLite persistence, text/ATA/status filters, paging, case restore, JSON export | Accounts, access control, multi-operator tenancy, cloud sync, retention/backup service |
+| Source library | Bounded PDF/TXT/MD extraction, local SQLite chunks, lexical BM25 search, source IDs and exact quotations | OCR, semantic/vector retrieval, external repositories, document authorization checks |
+| Agentic investigation | Explicit opt-in OpenAI Agents SDK lead and read-only source scout; max five turns; structured brief; exact quote checked against local chunks | Diagnosis, maintenance actions, directive applicability, semantic entailment verification, external write tools |
 | Knowledge graph | Case, ATA ranks, and keyword tags from a stored case | External reports, parts, aircraft configuration, inferred causal links |
 | Directives | Clear unavailable state | Directive content, serial applicability, compliance determination |
 | Sensor explorer | CSV validation and least-squares health-index threshold extrapolation | Validated prognostics, uncertainty, sensor feed, case-linked RUL |
@@ -56,6 +58,17 @@ confidence or probability.
   ATA rankings, and user-supplied context values. Newest cases appear first.
 - `GET /cases/{case_id}` returns the saved analysis payload; `GET /cases/{case_id}/graph` rebuilds
   the graph from that payload after restart. Missing IDs return 404.
+- `POST /cases` defaults to `mode=baseline`. `mode=agentic` is an explicit opt-in that sends the
+  report and matching source excerpts to the configured OpenAI model. A missing key or provider
+  failure is surfaced in the saved result; the keyword baseline remains intact.
+- `POST /sources` accepts PDF, TXT, or MD uploads up to 8 MiB; PDFs are limited to 120 pages and
+  extracted content to 250,000 characters. Scanned PDF OCR is unavailable. Source files and chunks
+  persist locally at `AEROSAFE_SOURCES_PATH`; `GET /sources` returns metadata, `DELETE /sources/{id}`
+  removes a source and its chunks. Local search is lexical, not semantic.
+- The agent tools are read-only and bounded to five turns. Each returned finding must refer to a
+  source/chunk actually retrieved in that run, and its quotation must match the stored chunk exactly.
+  This check verifies quotation identity, not whether the text supports the AI statement. Agent SDK
+  cloud tracing is disabled; the app stores stage/status counts without prompts or completion text.
 - The browser supports search (including user-entered aircraft/component context), status filter,
   50-case pages, clear no-result states, and restores the newest case on first load. Filtering must
   not submit or mutate case data.
@@ -93,8 +106,9 @@ confidence or probability.
   never yield an actionable draft or a reviewer approval gate.
 - **Explainable:** show source category and matched terms for baseline rankings; show limitations
   adjacent to demo estimates and smoke metrics.
-- **Local-first:** default case and audit data remain on the host volume. The UI makes no outbound
-  API calls; optional Whisper model acquisition is documented separately.
+- **Local-first:** case, audit, and source stores remain on the host volume. No document/report leaves
+  the machine unless the user explicitly selects agentic mode; then only the report and matching
+  excerpts are sent to OpenAI. Optional Whisper model acquisition is documented separately.
 - **Input bounds:** 10,000 characters per defect, 25 MiB voice upload, 1 MiB sensor CSV, and bounded
   case query/pagination parameters.
 - **Accessible:** keyboard-operable controls, visible focus, semantic headings/labels, readable
@@ -116,6 +130,9 @@ confidence or probability.
    narrow-screen navigation.
 9. Review all visible placeholders against the feature contract; no unimplemented integration may
    be presented as operational data or a completed check.
+10. Upload and delete bounded source documents; verify restart persistence and exact local chunk retrieval.
+11. With an API key configured, opt in to an agent run against a synthetic document and confirm the
+    resulting brief quotes only retrieved local source text. Without a key, baseline remains usable.
 
 ## Next implementation priorities
 

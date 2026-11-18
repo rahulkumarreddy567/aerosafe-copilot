@@ -3,168 +3,364 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#192f52">
-  <title>AeroSafe | Triage console</title>
+  <title>NeuralMech · Agentic Investigation Workbench</title>
   <link rel="stylesheet" href="/static/app.css">
-  <script src="/static/app.js" defer></script>
 </head>
 <body>
+  <div id="scan-line"></div>
+  <div id="hud-corners">
+    <div class="hud-corner tl"></div>
+    <div class="hud-corner tr"></div>
+    <div class="hud-corner bl"></div>
+    <div class="hud-corner br"></div>
+  </div>
+
   <div class="app-shell">
+    <!-- SIDEBAR -->
     <aside class="sidebar">
-      <a class="brand" href="#triage" aria-label="AeroSafe home">
-        <span class="brand-mark" aria-hidden="true"><span>A</span><i></i></span>
-        <span><strong>AeroSafe</strong><small>Maintenance · Safety AI</small></span>
-      </a>
-      <nav class="main-nav" aria-label="Console views">
-        <a href="#triage" data-view="triage" class="nav-link active"><span>01</span>Triage</a>
-        <a href="#agents" data-view="agents" class="nav-link"><span>02</span>Agent map</a>
-        <a href="#graph" data-view="graph" class="nav-link"><span>03</span>Knowledge graph</a>
-        <a href="#parts" data-view="parts" class="nav-link"><span>04</span>Parts map</a>
-        <a href="#directives" data-view="directives" class="nav-link"><span>05</span>Directives</a>
-        <a href="#rul" data-view="rul" class="nav-link"><span>06</span>RUL</a>
-        <a href="#audit" data-view="audit" class="nav-link"><span>07</span>Audit log</a>
-        <a href="#evaluation" data-view="evaluation" class="nav-link"><span>08</span>Evaluation</a>
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 48 48" fill="none">
+            <polygon points="24,2 46,13 46,35 24,46 2,35 2,13" stroke="url(#lg1)" stroke-width="1.5" fill="url(#lg2)"/>
+            <polygon points="24,10 38,18 38,30 24,38 10,30 10,18" stroke="url(#lg3)" stroke-width="1" fill="none"/>
+            <circle cx="24" cy="24" r="6" fill="url(#lg4)"/>
+            <defs>
+              <linearGradient id="lg1" x1="2" y1="2" x2="46" y2="46"><stop stop-color="#00f5ff"/><stop offset="1" stop-color="#7b2fff"/></linearGradient>
+              <linearGradient id="lg2" x1="2" y1="2" x2="46" y2="46"><stop stop-color="#00f5ff" stop-opacity="0.08"/><stop offset="1" stop-color="#7b2fff" stop-opacity="0.04"/></linearGradient>
+              <linearGradient id="lg3" x1="10" y1="10" x2="38" y2="38"><stop stop-color="#00f5ff" stop-opacity="0.5"/><stop offset="1" stop-color="#7b2fff" stop-opacity="0.5"/></linearGradient>
+              <radialGradient id="lg4" cx="0.3" cy="0.3"><stop stop-color="#00f5ff"/><stop offset="1" stop-color="#7b2fff"/></radialGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">NeuralMech</span>
+          <span class="brand-sub">AI · MAINTENANCE · INTELLIGENCE</span>
+        </div>
+      </div>
+
+      <div class="system-status">
+        <div class="status-row"><span class="status-dot active"></span><span>Local API</span><span class="status-val">READY</span></div>
+        <div class="status-row"><span class="status-dot" id="agent-dot"></span><span>Agent run</span><span class="status-val" id="agent-status">OPT IN</span></div>
+        <div class="status-row"><span class="status-dot" id="model-dot"></span><span>LLM Engine</span><span class="status-val" id="model-status">CHECKING</span></div>
+      </div>
+
+      <nav class="main-nav">
+        <a href="#" class="nav-link active" data-view="cockpit"><span class="nav-icon">⬡</span><span>Cockpit</span><span class="nav-badge live">LIVE</span></a>
+        <a href="#" class="nav-link" data-view="agents"><span class="nav-icon">◈</span><span>Agent Mesh</span><span class="nav-badge">2</span></a>
+        <a href="#" class="nav-link" data-view="neural"><span class="nav-icon">◉</span><span>Neural Graph</span></a>
+        <a href="#" class="nav-link" data-view="sources"><span class="nav-icon">▤</span><span>Source Library</span></a>
+        <a href="#" class="nav-link" data-view="rul"><span class="nav-icon">◌</span><span>RUL Estimator</span></a>
+        <a href="#" class="nav-link" data-view="audit"><span class="nav-icon">⊞</span><span>Audit Chain</span></a>
+        <a href="#" class="nav-link" data-view="eval"><span class="nav-icon">◈</span><span>Benchmark</span></a>
       </nav>
-      <div class="sidebar-bottom">
-        <span class="local-badge"><i></i>Local inference</span>
-        <p>Prototype on public data.<br>Not approved maintenance data.</p>
+
+      <div class="sidebar-footer">
+        <div class="footer-badge"><i></i>Local-first · AI opt in</div>
+        <div class="footer-warn">⚠ Prototype · Not maintenance guidance</div>
       </div>
     </aside>
 
+    <!-- MAIN -->
     <div class="main-shell">
       <header class="topbar">
-        <div class="topbar-title"><span class="mobile-brand">AeroSafe</span><span id="page-title">New case</span><span class="topbar-context">DEMO CONSOLE</span></div>
-        <div class="topbar-meta"><span class="aircraft-chip">Aircraft context <b>not connected</b></span><span class="language-chip">Detected language <b id="language-label">EN / FR</b></span><span class="service-state"><i id="service-dot"></i><span id="service-label">Connecting</span></span></div>
+        <div class="topbar-left">
+          <span class="topbar-title" id="page-title">COCKPIT</span>
+          <span class="topbar-sep">|</span>
+            <span class="topbar-sub" id="page-sub">Evidence-grounded investigation workbench</span>
+        </div>
+        <div class="topbar-center">
+          <div class="ai-thinking" id="ai-thinking" hidden>
+            <span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span>
+            <span id="thinking-label">Agents reasoning…</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <span class="chip chip-lang"><span id="lang-label">EN</span></span>
+          <span class="chip chip-health"><i id="health-dot"></i><span id="health-label">Connecting</span></span>
+        </div>
       </header>
 
-      <main id="view-root" tabindex="-1">
-        <section class="view view-triage" data-view-panel="triage">
-          <div class="triage-intro"><div><div class="section-kicker">Maintenance intelligence · Prototype</div><h1>New maintenance case</h1><p>Describe a defect to see local triage signals and a trace of the current workflow.</p></div><div class="intro-badges"><span><i></i>Local processing</span><span>English · Français</span></div></div>
-          <div class="triage-grid">
-            <aside class="entry-column">
-              <section class="entry-card">
-                <div class="section-kicker">Defect description</div>
-                <div class="input-tabs" role="tablist" aria-label="Case input type">
-                  <button type="button" role="tab" aria-selected="true" class="input-tab active" data-input-mode="type">Type</button>
-                  <button type="button" role="tab" aria-selected="false" class="input-tab" data-input-mode="speak">Speak (Whisper)</button>
+      <main id="view-root">
+
+        <!-- ═══════════════ COCKPIT VIEW ═══════════════ -->
+        <section class="view" data-view="cockpit">
+          <div class="cockpit-grid">
+
+            <!-- LEFT: Input Panel -->
+            <div class="cockpit-left">
+              <div class="panel glass-panel">
+                <div class="panel-header">
+                  <span class="panel-kicker">DEFECT INPUT</span>
+                  <div class="input-mode-toggle">
+                    <button class="mode-btn active" data-mode="type">⌨ TYPE</button>
+                    <button class="mode-btn" data-mode="speak">🎙 VOICE</button>
+                  </div>
                 </div>
                 <form id="case-form">
-                  <label class="sr-only" for="case-text">Defect description</label>
-                  <textarea id="case-text" maxlength="10000" placeholder="Describe the defect, symptoms and flight phase…"></textarea>
-                  <details class="context-details">
-                    <summary>Aircraft and component details <span>Optional</span></summary>
-                    <p>These details are user-entered and unverified. They do not affect triage or directive applicability.</p>
+                  <div class="textarea-wrap">
+                    <textarea id="case-text" maxlength="10000" placeholder="Describe the defect, symptoms, flight phase, component…&#10;&#10;Example: Hydraulic pressure drop during landing gear retraction on approach. Nose gear door actuator making abnormal noise."></textarea>
+                    <div class="textarea-counter"><span id="char-count">0</span>/10000</div>
+                  </div>
+                  <div class="audio-section" id="audio-section" hidden>
+                    <label class="file-drop" for="audio-file">
+                      <span>🎙 Drop audio or click to upload</span>
+                      <small>MP3, WAV, M4A · max 25MB</small>
+                      <input id="audio-file" type="file" accept="audio/*">
+                    </label>
+                    <span class="file-chosen" id="file-chosen"></span>
+                  </div>
+                  <details class="context-panel">
+                    <summary>Aircraft context <span class="opt-badge">OPTIONAL</span></summary>
                     <div class="context-grid">
-                      <label>Aircraft model<input id="aircraft-model" maxlength="100" placeholder="e.g. A320"></label>
-                      <label>Aircraft serial / MSN<input id="aircraft-serial" maxlength="100" placeholder="Aircraft serial or MSN"></label>
-                      <label>Component<input id="component-name" maxlength="100" placeholder="e.g. hydraulic pump"></label>
-                      <label>Part number<input id="part-number" maxlength="100" placeholder="P/N"></label>
-                      <label>Component serial<input id="component-serial" maxlength="100" placeholder="S/N"></label>
+                      <label>Aircraft model<input id="ac-model" maxlength="100" placeholder="e.g. A320-214"></label>
+                      <label>MSN / Serial<input id="ac-serial" maxlength="100" placeholder="MSN-1234"></label>
+                      <label>Component<input id="ac-comp" maxlength="100" placeholder="e.g. Hydraulic pump"></label>
+                      <label>Part number<input id="ac-pn" maxlength="100" placeholder="P/N"></label>
                     </div>
                   </details>
-                  <div class="audio-row" id="audio-row" hidden>
-                    <label class="file-label" for="audio-file">Choose voice note</label>
-                    <input id="audio-file" type="file" accept="audio/*">
-                    <span class="file-name" id="file-name">No audio selected</span>
-                  </div>
-                  <div class="form-error" id="form-error" role="alert" hidden></div>
-                  <div class="revise-note" id="revise-note" role="status" hidden></div>
-                  <button class="button button-primary analyze-button" id="analyze-button" type="submit">Analyze</button>
-                  <button class="button button-outline unclear-button" id="unclear-button" type="button">Try an unclear case</button>
+                  <div class="form-error" id="form-error" hidden></div>
+                    <label class="agentic-optin"><input id="agentic-optin" type="checkbox"><span><strong>Run AI investigation</strong><small>Sends this defect report and matching local excerpts to OpenAI. Read-only; optional.</small></span></label>
+                    <div class="form-actions">
+                    <button class="btn btn-primary" id="analyze-btn" type="submit">
+                      <span class="btn-glow"></span>⚡ ANALYZE
+                    </button>
+                    <button class="btn btn-ghost" id="demo-btn" type="button">▶ Demo case</button>
+                    </div>
                 </form>
-              </section>
-              <section class="cases-section" aria-labelledby="cases-heading">
-                <div class="section-kicker" id="cases-heading">Cases <span id="case-count">0</span></div>
-                <div class="case-filters"><label class="sr-only" for="case-search">Search cases</label><input id="case-search" type="search" placeholder="Search description, ATA, tag…" autocomplete="off"><label class="sr-only" for="case-status-filter">Filter by status</label><select id="case-status-filter"><option value="">All statuses</option><option value="abstained">Abstained</option><option value="awaiting_approval">Awaiting review</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div>
-                <div class="case-list" id="case-list"><div class="case-list-empty">No cases yet</div></div>
-                <button class="case-load-more" id="case-load-more" type="button" hidden>Load more cases</button>
-              </section>
-            </aside>
+              </div>
 
-            <section class="analysis-column" aria-label="Triage analysis">
-              <div class="agent-strip" id="agent-strip" aria-label="Agent status"></div>
-              <section class="analysis-panel" id="analysis-panel">
-                <div class="empty-state" id="empty-state">
-                  <div class="empty-glyph" aria-hidden="true">✳</div>
-                  <h1>No analysis yet</h1>
-                  <p>Describe the defect on the left and press Analyze. Triage runs locally. Retrieval, directive checks and claim verification are still being built, so the system will abstain rather than invent a recommendation.</p>
+              <!-- Case Library -->
+              <div class="panel glass-panel cases-panel">
+                <div class="panel-header">
+                  <span class="panel-kicker">CASE LIBRARY <span id="case-count-badge">0</span></span>
+                  <button class="icon-btn" id="refresh-cases" title="Refresh">↻</button>
                 </div>
+                <div class="case-search-row">
+                  <input id="case-search" type="search" placeholder="🔍 Search ATA, description, tag…" autocomplete="off">
+                  <select id="case-filter">
+                    <option value="">All</option>
+                    <option value="abstained">Abstained</option>
+                    <option value="awaiting_approval">Awaiting</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+                <div class="case-list" id="case-list"><div class="list-empty">No cases yet — run your first analysis</div></div>
+                <button class="load-more-btn" id="load-more" hidden>Load more</button>
+              </div>
+            </div>
+
+            <!-- RIGHT: Analysis Panel -->
+            <div class="cockpit-right">
+              <!-- Agent Pipeline Strip -->
+              <div class="agent-pipeline" id="agent-pipeline">
+                <span class="pipeline-label">AGENT PIPELINE</span>
+              </div>
+
+              <!-- Result Panel -->
+              <div class="panel glass-panel result-panel" id="result-panel">
+                <div class="empty-hologram" id="empty-hologram">
+                  <div class="hologram-ring r1"></div>
+                  <div class="hologram-ring r2"></div>
+                  <div class="hologram-ring r3"></div>
+                  <div class="hologram-core">
+                    <svg viewBox="0 0 60 60" fill="none"><polygon points="30,4 56,18 56,42 30,56 4,42 4,18" stroke="url(#hg)" stroke-width="1.5"/><circle cx="30" cy="30" r="10" fill="url(#hf)" opacity="0.6"/><defs><linearGradient id="hg" x1="4" y1="4" x2="56" y2="56"><stop stop-color="#00f5ff"/><stop offset="1" stop-color="#7b2fff"/></linearGradient><radialGradient id="hf"><stop stop-color="#00f5ff"/><stop offset="1" stop-color="#7b2fff"/></radialGradient></defs></svg>
+                  </div>
+                  <h2>Awaiting Analysis</h2>
+                  <p>Describe a defect to run transparent local keyword triage. Optionally enable a source-grounded AI investigation.</p>
+                  <div class="capability-chips">
+                    <span>⌁ Keyword signals</span><span>🔗 Similar cases</span><span>▤ Local sources</span><span>◈ Optional agents</span>
+                  </div>
+                </div>
+
                 <div id="case-result" hidden>
-                  <div class="result-heading">
-                    <div><div class="section-kicker">Triage result</div><h1 id="result-ata">Case analysis</h1><p id="result-subtitle"></p></div>
-                    <div class="result-actions"><button class="button button-outline" id="revise-case" type="button" disabled>Revise as new case</button><button class="button button-outline" id="export-case" type="button" disabled>Export JSON</button><span class="status-pill" id="result-status">ABSTAINED</span></div>
+                  <div class="result-hero">
+                    <div class="result-hero-left">
+                      <div class="result-ata-badge" id="result-ata-badge">ATA —</div>
+                      <div class="result-title" id="result-title">Analysis complete</div>
+                      <div class="result-id" id="result-id"></div>
+                    </div>
+                    <div class="result-hero-right">
+                      <div class="outcome-badge" id="outcome-badge">ABSTAINED</div>
+                      <div class="result-btns">
+                        <button class="btn btn-sm btn-ghost" id="revise-btn" disabled>↩ Revise</button>
+                        <button class="btn btn-sm btn-ghost" id="export-btn" disabled>⬇ Export</button>
+                      </div>
+                    </div>
                   </div>
-                  <div class="case-description"><span>Reported description</span><p id="case-description"></p><small id="case-created-at"></small></div>
-                  <div class="aircraft-context-result" id="aircraft-context-result" hidden></div>
+
                   <div class="result-notice" id="result-notice"></div>
-                  <div class="result-summary" id="result-summary"></div>
-                  <div class="result-tabs" role="tablist" aria-label="Case details">
-                    <button class="result-tab active" role="tab" aria-selected="true" type="button" data-result-tab="evidence">Evidence</button>
-                    <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="signals">Triage signals</button>
-                    <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="directives">ADs</button>
-                    <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="rul">RUL</button>
-                    <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="graph">Graph</button>
-                    <button class="result-tab" role="tab" aria-selected="false" type="button" data-result-tab="trace">Agent trace</button>
+
+                  <!-- Confidence Heatmap -->
+                  <div class="confidence-bar-row" id="confidence-bars"></div>
+
+                  <!-- Summary Grid -->
+                  <div class="summary-grid" id="summary-grid"></div>
+
+                  <!-- Tabs -->
+                  <div class="result-tabs">
+                    <button class="rtab active" data-tab="signals">🧠 Signals</button>
+                    <button class="rtab" data-tab="brief">◈ Investigation</button>
+                    <button class="rtab" data-tab="similar">🔗 Similar</button>
+                    <button class="rtab" data-tab="entities">🏷 Entities</button>
+                    <button class="rtab" data-tab="graph">◉ Graph</button>
+                    <button class="rtab" data-tab="trace">📡 Trace</button>
                   </div>
-                  <div class="result-tab-content" id="result-tab-content"></div>
-                  <div class="decision-actions" id="decision-actions" hidden>
-                    <span>Recommendation requires human review.</span>
-                    <button class="button button-danger" data-decision="reject" type="button">Reject</button>
-                    <button class="button button-success" data-decision="approve" type="button">Approve and log</button>
+                  <div class="result-tab-body" id="result-tab-body"></div>
+
+                  <!-- Decision -->
+                  <div class="decision-zone" id="decision-zone" hidden>
+                    <div class="decision-header">⚖ HUMAN REVIEW REQUIRED</div>
+                    <div class="decision-fields">
+                      <input id="reviewer-name" type="text" maxlength="200" placeholder="Reviewer name" value="reviewer">
+                      <input id="reviewer-note" type="text" maxlength="2000" placeholder="Review note (optional)">
+                    </div>
+                    <div class="decision-btns">
+                      <button class="btn btn-reject" data-decision="reject">✕ REJECT</button>
+                      <button class="btn btn-approve" data-decision="approve">✓ APPROVE & LOG</button>
+                    </div>
                   </div>
                 </div>
-              </section>
-            </section>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section class="view subview" data-view-panel="agents" hidden>
-          <div class="view-heading"><div><div class="section-kicker">Workflow</div><h1>Agent map</h1><p>Current pipeline stages and their implementation status.</p></div><span class="status-pill status-pill-warn">Prototype</span></div>
-          <div class="workflow-card"><div class="workflow" id="workflow-map"></div><div class="workflow-caption">The line shows the configured path. A stage marked “stub” is connected but does not perform its production task yet.</div></div>
+        <!-- ═══════════════ AGENT MESH VIEW ═══════════════ -->
+        <section class="view subview" data-view="agents" hidden>
+          <div class="view-header">
+            <div><div class="view-kicker">BOUNDED ORCHESTRATION</div><h1>Agent Mesh</h1><p>Two read-only agents: an Investigation Lead and a local Evidence Scout. Runs only when requested.</p></div>
+            <span class="status-chip chip-warn">PROTOTYPE</span>
+          </div>
+          <div class="agent-mesh-grid" id="agent-mesh-grid"></div>
+          <div class="mesh-legend">
+            <span><i class="dot-green"></i>Live</span>
+            <span><i class="dot-amber"></i>Stub — wired, not implemented</span>
+            <span><i class="dot-red"></i>Held — awaiting upstream</span>
+            <span><i class="dot-blue"></i>Optional</span>
+          </div>
         </section>
 
-        <section class="view subview" data-view-panel="graph" hidden>
-          <div class="view-heading"><div><div class="section-kicker">Case-linked data</div><h1>Knowledge graph</h1><p>Explore the local triage signals extracted from a case.</p></div><span class="status-pill status-pill-info">Live case view</span></div>
-          <div class="feature-grid graph-layout"><section class="feature-card graph-stage"><div class="graph-toolbar"><label for="graph-case-select">Active case</label><select id="graph-case-select"><option value="">Choose a case</option></select><span id="graph-count" class="graph-count">Waiting for case</span></div><div id="graph-network" class="graph-network"></div><div id="graph-empty" class="feature-empty" hidden></div><div class="graph-legend"><span><i class="legend-case"></i>Case</span><span><i class="legend-ata"></i>ATA ranking</span><span><i class="legend-tag"></i>Keyword tag</span></div></section><aside class="feature-card feature-aside graph-inspector"><div class="section-kicker">Selected node</div><h2 id="graph-selected">Choose a node</h2><p id="graph-detail">Select a case and then a node to inspect its source.</p><div id="graph-source" class="graph-source">No case selected</div></aside></div>
-          <p class="view-disclaimer" id="graph-limitations">The graph only displays relationships inferred from the selected case’s keyword triage. It does not contain retrieved reports, directives, or aircraft configuration.</p>
+        <!-- ═══════════════ NEURAL GRAPH VIEW ═══════════════ -->
+        <section class="view subview" data-view="neural" hidden>
+          <div class="view-header">
+            <div><div class="view-kicker">KNOWLEDGE TOPOLOGY</div><h1>Neural Graph</h1><p>Live case relationship graph — ATA rankings, symptom entities, component tags.</p></div>
+            <span class="status-chip chip-cyan">LIVE</span>
+          </div>
+          <div class="neural-layout">
+            <div class="panel glass-panel neural-stage">
+              <div class="neural-toolbar">
+                <label>Active case</label>
+                <select id="graph-case-select"><option value="">Select a case</option></select>
+                <span id="graph-stats" class="graph-stats">—</span>
+              </div>
+              <div id="graph-canvas-wrap" class="graph-canvas-wrap"></div>
+              <div class="graph-legend-row">
+                <span><i class="leg-case"></i>Case</span>
+                <span><i class="leg-ata"></i>ATA</span>
+                <span><i class="leg-sym"></i>Symptom</span>
+                <span><i class="leg-comp"></i>Component</span>
+                <span><i class="leg-phase"></i>Phase</span>
+              </div>
+            </div>
+            <div class="panel glass-panel neural-inspector">
+              <div class="panel-kicker">NODE INSPECTOR</div>
+              <h3 id="node-title">Select a node</h3>
+              <p id="node-detail">Click any node to inspect its source and relationships.</p>
+              <div id="node-source" class="node-source-badge">—</div>
+            </div>
+          </div>
         </section>
 
-        <section class="view subview" data-view-panel="parts" hidden>
-          <div class="view-heading"><div><div class="section-kicker">Illustrative systems map</div><h1>Parts map</h1><p>ATA chapter overview. No aircraft configuration is connected.</p></div><span class="status-pill status-pill-muted">Illustrative</span></div>
-          <div class="feature-grid"><div class="feature-card aircraft-map-card"><div class="aircraft-map" id="aircraft-map"></div><p class="map-caption">Illustrative system map only. It is not an aircraft configuration or maintenance record.</p></div><aside class="feature-card feature-aside"><div class="section-kicker">Selected system</div><h2 id="part-selected">Select an ATA chapter</h2><p id="part-detail">The keyword baseline can rank a few ATA chapters from the defect text. Aircraft parts and open case counts are not connected.</p><div class="ata-list" id="ata-list"></div></aside></div>
-          <div class="feature-card phase-card"><div class="section-kicker">Flight phase</div><h2>Flight phase tagging</h2><p id="phase-note">No case selected. Phase entities are detected by keyword only.</p><div class="phase-track"><span>Taxi</span><span>Takeoff</span><span>Climb</span><span>Cruise</span><span>Approach</span><span>Landing</span></div></div>
+        <section class="view subview" data-view="sources" hidden>
+          <div class="view-header"><div><div class="view-kicker">LOCAL DOCUMENT SEARCH</div><h1>Source Library</h1><p>Upload PDFs, text files, or Markdown. Search is lexical and local; AI runs receive only matching excerpts when opted in.</p></div></div>
+          <div class="panel glass-panel source-upload-panel"><label class="btn btn-primary" for="source-file">＋ Add source</label><input id="source-file" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" hidden><span id="source-upload-status" class="file-chosen">PDF, TXT, MD · 8 MiB max · scanned PDF OCR unavailable</span></div>
+          <div class="source-list" id="source-list"></div>
+          <div class="rul-callout">Sources stay in the local SQLite library. Uploaded text may include material you are not authorized to share; AI mode sends matching excerpts to OpenAI.</div>
         </section>
 
-        <section class="view subview" data-view-panel="directives" hidden>
-          <div class="view-heading"><div><div class="section-kicker">Compliance</div><h1>Airworthiness directive check</h1><p>Rules-first applicability review.</p></div><span class="status-pill status-pill-warn">Not evaluated</span></div>
-          <div class="feature-card directive-empty"><div class="empty-glyph" aria-hidden="true">⌁</div><h2>Directive data is not connected</h2><p>No airworthiness directives were evaluated for this case. The system cannot determine applicability without source data, aircraft configuration and a rules engine.</p></div>
+        <!-- ═══════════════ RUL VIEW ═══════════════ -->
+        <section class="view subview" data-view="rul" hidden>
+          <div class="view-header">
+            <div><div class="view-kicker">LINEAR TREND ESTIMATE</div><h1>RUL Estimator</h1><p>OLS health-index threshold projection from an uploaded sensor CSV.</p></div>
+            <span class="status-chip chip-amber">DEMO MODEL</span>
+          </div>
+          <div class="rul-callout">⚠ <strong>Prototype only.</strong> Linear OLS trend — not a trained prognostics model. Do not use for maintenance decisions.</div>
+          <div class="rul-layout">
+            <div class="panel glass-panel rul-input-panel">
+              <div class="panel-kicker">SENSOR INPUT</div>
+              <form id="rul-form">
+                <div class="rul-drop-zone" id="rul-drop">
+                  <div class="drop-icon">📊</div>
+                  <strong>Drop CSV or click to upload</strong>
+                  <small>Format: cycle,health_index · min 3 rows · max 1MB</small>
+                  <label class="btn btn-ghost" for="sensor-file">Choose file</label>
+                  <input id="sensor-file" type="file" accept=".csv,text/csv" hidden>
+                  <span id="sensor-file-name" class="file-chosen"></span>
+                </div>
+                <div class="rul-controls">
+                  <label class="ctrl-label">Failure threshold<input id="rul-threshold" type="number" min="0" max="0.99" step="0.01" value="0.2"></label>
+                  <button class="btn btn-primary" id="rul-btn" type="submit">⚡ Analyze</button>
+                  <button class="btn btn-ghost" id="rul-sample-btn" type="button">▶ Sample data</button>
+                </div>
+                <div class="form-error" id="rul-error" hidden></div>
+              </form>
+            </div>
+            <div class="panel glass-panel rul-result-panel">
+              <div class="panel-kicker">ESTIMATED REMAINING CYCLES</div>
+              <div class="rul-big-number" id="rul-number">—</div>
+              <div id="rul-detail" class="rul-detail">Upload a sensor CSV to begin.</div>
+              <div id="rul-method-badge" class="method-badge">Awaiting input</div>
+            </div>
+          </div>
+          <div class="panel glass-panel rul-chart-panel">
+            <div class="panel-kicker">HEALTH INDEX TREND</div>
+            <div id="rul-chart" class="rul-chart"><div class="chart-placeholder">No data loaded</div></div>
+            <div class="chart-legend">— Observed &nbsp;&nbsp; - - Projected &nbsp;&nbsp; ··· Threshold</div>
+          </div>
         </section>
 
-        <section class="view subview" data-view-panel="rul" hidden>
-          <div class="view-heading"><div><div class="section-kicker">Sensor analysis</div><h1>Health trend explorer</h1><p>Upload a sensor CSV to estimate threshold crossing from a linear trend.</p></div><span class="status-pill status-pill-info">Demo estimator</span></div>
-          <div class="rul-callout"><strong>Prototype estimate only</strong><span>This simple trend extrapolation is not a trained model and must not be used for maintenance decisions.</span></div>
-          <form id="rul-form" class="feature-card sensor-form"><div class="sensor-form-copy"><div class="section-kicker">Sensor input</div><h2>Analyze a health index series</h2><p>Use the documented <code>cycle,health_index</code> CSV format. Values must be between 0 and 1, with at least 3 rows.</p><div class="sample-actions"><a href="/static/demo_sensor.csv" download>Download sample CSV</a><button class="button button-outline" id="use-rul-sample" type="button">Try sample data</button></div></div><label class="sensor-file-label" for="sensor-file">Choose CSV<input id="sensor-file" type="file" accept=".csv,text/csv" required></label><label class="threshold-label" for="rul-threshold">Threshold<input id="rul-threshold" type="number" min="0" max="0.99" step="0.01" value="0.2"></label><button class="button button-primary" id="rul-button" type="submit">Analyze trend</button><div id="rul-error" class="form-error" role="alert" hidden></div></form>
-          <div class="feature-grid rul-grid"><div class="feature-card chart-card"><div class="section-kicker">Observed health trend</div><div id="rul-chart" class="rul-chart"><div class="chart-empty"><strong>No sensor series loaded</strong><small>Choose a CSV or download the sample.</small></div></div></div><aside class="feature-card feature-aside rul-result"><div class="section-kicker">Estimated remaining cycles</div><div class="rul-value" id="rul-estimate">— <small>cycles</small></div><div id="rul-result-detail" class="rul-result-detail">No estimate yet.</div><span id="rul-method" class="method-badge">Waiting for input</span></aside></div>
-          <p class="view-disclaimer">The estimate depends on the uploaded values, selected threshold, and linear extrapolation assumption. Sensor units, operating context, uncertainty bounds, and model validation are not represented.</p>
+        <!-- ═══════════════ AUDIT VIEW ═══════════════ -->
+        <section class="view subview" data-view="audit" hidden>
+          <div class="view-header">
+            <div><div class="view-kicker">TAMPER-EVIDENT LOG</div><h1>Audit Chain</h1><p>SHA-256 hash-chained immutable event log. Every agent action and human decision is recorded.</p></div>
+            <button class="btn btn-ghost" id="verify-btn">🔒 Verify integrity</button>
+          </div>
+          <div class="audit-status-bar" id="audit-status">Checking chain…</div>
+          <div class="panel glass-panel table-panel">
+            <table class="data-table"><thead><tr><th>#</th><th>Timestamp</th><th>Actor</th><th>Action</th><th>Hash</th></tr></thead>
+            <tbody id="audit-rows"><tr><td colspan="5" class="empty-cell">Loading…</td></tr></tbody></table>
+          </div>
         </section>
 
-        <section class="view subview" data-view-panel="audit" hidden>
-          <div class="view-heading"><div><div class="section-kicker">Tamper-evident history</div><h1>Audit log</h1><p>Case and reviewer events from the local hash chain.</p></div><button class="button button-outline" id="verify-audit" type="button">Verify chain</button></div>
-          <div class="audit-banner" id="audit-banner" aria-live="polite">Loading audit state…</div>
-          <div class="feature-card table-card"><div class="audit-table-wrap"><table class="audit-table"><thead><tr><th>#</th><th>Time</th><th>Actor</th><th>Action</th><th>Hash</th></tr></thead><tbody id="audit-rows"><tr><td colspan="5" class="table-empty">No audit records loaded.</td></tr></tbody></table></div></div>
+        <!-- ═══════════════ EVAL VIEW ═══════════════ -->
+        <section class="view subview" data-view="eval" hidden>
+          <div class="view-header">
+            <div><div class="view-kicker">MODEL BENCHMARK</div><h1>Evaluation</h1><p>Reproducible ATA classification metrics on the synthetic smoke test set.</p></div>
+            <button class="btn btn-ghost" id="refresh-eval-btn">↻ Refresh</button>
+          </div>
+          <div class="eval-banner">⚠ Synthetic sanity check only — not operational data or a held-out benchmark.</div>
+          <div class="metric-row">
+            <div class="metric-card glass-panel primary-metric"><span>Macro F1</span><strong id="eval-f1">—</strong><small id="eval-samples">—</small></div>
+            <div class="metric-card glass-panel"><span>Top-1 Accuracy</span><strong id="eval-acc">—</strong><small>Exact ATA match</small></div>
+            <div class="metric-card glass-panel"><span>Top-3 Coverage</span><strong id="eval-top3">—</strong><small>ATA in top 3</small></div>
+            <div class="metric-card glass-panel"><span>ATA Classes</span><strong id="eval-classes">—</strong><small>Evaluated</small></div>
+          </div>
+          <div class="panel glass-panel eval-table-panel">
+            <div class="eval-table-header"><h3>Per-class breakdown</h3><a href="/evaluation/data" class="link-btn">⬇ Download dataset</a></div>
+            <table class="data-table"><thead><tr><th>ATA</th><th>Support</th><th>Precision</th><th>Recall</th><th>F1</th><th>Bar</th></tr></thead>
+            <tbody id="eval-rows"></tbody></table>
+          </div>
+          <div class="panel glass-panel eval-table-panel">
+            <h3>Confusion matrix</h3>
+            <div class="table-scroll"><table class="data-table confusion-table"><thead id="conf-head"></thead><tbody id="conf-rows"></tbody></table></div>
+          </div>
         </section>
 
-        <section class="view subview" data-view-panel="evaluation" hidden>
-          <div class="view-heading"><div><div class="section-kicker">Baseline scorecard</div><h1>Evaluation</h1><p>Reproducible metrics from the included synthetic ATA smoke set.</p></div><button class="button button-outline" id="refresh-evaluation" type="button">Refresh results</button></div>
-          <div class="evaluation-banner"><strong>Synthetic sanity check</strong><span>These examples verify basic keyword behavior. They are not operational data, a held-out benchmark, or evidence of real-world performance.</span></div>
-          <div class="metric-grid"><article class="feature-card metric-card metric-primary"><span>ATA macro-F1</span><strong id="evaluation-macro-f1">Loading…</strong><small id="evaluation-sample-count">Calculating baseline</small></article><article class="feature-card metric-card"><span>Top-1 accuracy</span><strong id="evaluation-accuracy">—</strong><small>On the synthetic set</small></article><article class="feature-card metric-card"><span>Top-3 coverage</span><strong id="evaluation-top3">—</strong><small>Expected ATA appears in ranked top three</small></article><article class="feature-card metric-card"><span>Samples</span><strong id="evaluation-samples">—</strong><small>Explicitly labeled rows</small></article></div>
-          <div class="feature-card evaluation-card"><div class="evaluation-table-head"><div><h2>ATA baseline by class</h2><p id="evaluation-warning">Loading evaluation details…</p></div><a href="/evaluation/data" id="evaluation-data-link">Download labeled sample set</a></div><div class="audit-table-wrap"><table class="audit-table evaluation-table"><thead><tr><th>ATA</th><th>Samples</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead><tbody id="evaluation-rows"><tr><td colspan="5" class="table-empty">Loading results…</td></tr></tbody></table></div></div>
-          <div class="feature-card evaluation-card"><div class="evaluation-table-head"><div><h2>Top-1 confusion matrix</h2><p>Rows are expected chapters; columns are predicted chapters. Values count synthetic examples.</p></div></div><div class="audit-table-wrap"><table class="audit-table confusion-table" aria-label="Top-1 confusion matrix for synthetic ATA examples"><thead id="confusion-head"></thead><tbody id="confusion-rows"><tr><td class="table-empty">Loading matrix…</td></tr></tbody></table></div></div>
-          <div class="feature-card evaluation-card evaluation-gaps"><h2>Next evaluation inputs</h2><ul><li><strong>Retrieval recall@k:</strong> relevance-labeled maintenance queries and passages.</li><li><strong>RUL error:</strong> run-to-failure sensor records with a held-out split.</li><li><strong>Claim support:</strong> claims annotated against approved source passages.</li><li><strong>Speech WER:</strong> reference transcripts paired with representative audio.</li></ul><p>These measures stay unavailable until both the data and corresponding feature are implemented.</p><code>python eval/wer.py eval/aviation_phrases.csv</code></div>
-        </section>
       </main>
-      <footer class="page-footer">Prototype on public data. Illustrative values are labelled. Not approved maintenance data.</footer>
     </div>
   </div>
+
+  <script src="/static/app.js"></script>
 </body>
 </html>

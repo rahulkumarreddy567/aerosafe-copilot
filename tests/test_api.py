@@ -8,16 +8,23 @@ from aerosafe.api.main import app
 def isolate_local_stores(tmp_path, monkeypatch):
     monkeypatch.setenv("AEROSAFE_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
     monkeypatch.setenv("AEROSAFE_CASES_PATH", str(tmp_path / "cases.sqlite3"))
+    monkeypatch.setenv("AEROSAFE_SOURCES_PATH", str(tmp_path / "sources.sqlite3"))
 
 
 def test_case_flow_and_audit(tmp_path, monkeypatch):
     monkeypatch.setenv("AEROSAFE_AUDIT_PATH", str(tmp_path / "audit.jsonl"))
     c = TestClient(app)
-    assert c.get("/health").json() == {"status": "ok"}
+    health = c.get("/health").json()
+    assert health["status"] == "ok"
+    assert isinstance(health["agentic_configured"], bool)
+    assert health["source_count"] == 0
     page = c.get("/")
     assert page.status_code == 200
-    assert "New case" in page.text
-    assert "Audit log" in page.text
+    assert "NeuralMech" in page.text
+    assert "Evidence-grounded investigation workbench" in page.text
+    assert "Run AI investigation" in page.text
+    assert "data-view=\"sources\"" in page.text
+    assert "three.min.js" not in page.text
     response = c.post("/cases", json={"text": "hydraulic pressure drop on landing gear retraction"})
     assert response.status_code == 200
     r = response.json()
@@ -27,6 +34,7 @@ def test_case_flow_and_audit(tmp_path, monkeypatch):
     assert r["signals"]
     assert c.get(f"/cases/{r['case_id']}").json()["outcome"] == "abstained"
     assert c.get("/audit/verify").json() == {"intact": True, "first_bad_index": None}
+    assert c.get(f"/cases/{r['case_id']}/suggest").status_code == 404
 
 
 def test_case_context_is_saved_searchable_and_not_used_as_triage_input():
@@ -72,6 +80,34 @@ def test_rejects_invalid_or_blank_case_and_decision_values():
     assert c.post("/cases", json={"text": "   "}).status_code == 422
     assert c.post("/cases", json={"text": "defect", "unexpected": True}).status_code == 422
     assert c.post("/cases/case-unknown/decision", json={"decision": "maybe"}).status_code == 422
+
+
+def test_agentic_mode_without_key_saves_baseline(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    c = TestClient(app)
+    response = c.post("/cases", json={"text": "hydraulic pressure report", "mode": "agentic"})
+    assert response.status_code == 200
+    case = response.json()
+    assert case["agentic"]["status"] == "unavailable"
+    assert c.get(f"/cases/{case['case_id']}").json()["agentic"]["status"] == "unavailable"
+
+
+def test_invalid_provider_key_is_reported_without_losing_baseline(monkeypatch):
+    from aerosafe.api import main
+    class AuthenticationError(Exception):
+        pass
+    async def reject_key(*args, **kwargs):
+        raise AuthenticationError("credential details must not be returned")
+    monkeypatch.setattr(main.agentic, "available", lambda: True)
+    monkeypatch.setattr(main.agentic, "investigate", reject_key)
+    c = TestClient(app)
+    response = c.post("/cases", json={"text": "hydraulic pressure report", "mode": "agentic"})
+    case = response.json()
+    assert response.status_code == 200
+    assert case["agentic"]["status"] == "failed"
+    assert "invalid_api_key" in case["agentic"]["message"]
+    assert "credential details" not in case["agentic"]["message"]
+    assert c.get(f"/cases/{case['case_id']}").json()["signals"]
 
 
 def test_case_decision_is_one_time_only(tmp_path, monkeypatch):

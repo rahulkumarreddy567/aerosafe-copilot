@@ -8,19 +8,32 @@ import re
 from dataclasses import dataclass, field
 
 ATA_KEYWORDS = {
-    "32": ["landing gear", "nose gear", "main gear", "retraction", "train d'atterrissage", "rentrée du train"],
-    "29": ["hydraulic", "hydraulique", "pressure", "pression", "reservoir"],
-    "27": ["flap", "slat", "aileron", "spoiler", "flight control", "commandes de vol"],
-    "28": ["fuel", "carburant"],
-    "31": ["display", "avionics", "avionique", "instrument"],
-    "71": ["engine", "moteur", "nacelle", "turbine"],
-    "55": ["stabilizer", "elevator", "rudder", "empennage"],
+    "32": ["landing gear", "nose gear", "main gear", "retraction", "train d'atterrissage", "rentree du train", "gear door", "strut"],
+    "29": ["hydraulic", "hydraulique", "pressure", "pression", "reservoir", "hydraulic pump", "hydraulic fluid"],
+    "27": ["flap", "slat", "aileron", "spoiler", "flight control", "commandes de vol", "actuator", "control surface"],
+    "28": ["fuel", "carburant", "fuel pump", "fuel leak", "fuel flow", "fuel pressure", "fuel quantity"],
+    "31": ["display", "avionics", "avionique", "instrument", "efis", "eicas", "ecam", "warning light", "caution"],
+    "71": ["engine", "moteur", "nacelle", "turbine", "thrust", "n1", "n2", "egt", "oil pressure", "compressor"],
+    "55": ["stabilizer", "empennage", "horizontal stabilizer", "vertical stabilizer", "trim", "rudder", "elevator"],
+    "34": ["navigation", "gps", "ils", "vor", "adiru", "irs", "inertial", "radio altimeter", "transponder", "tcas"],
 }
-ATA_NAMES = {"32": "Landing gear", "29": "Hydraulic power", "27": "Flight controls",
-             "28": "Fuel", "31": "Instruments", "71": "Power plant", "55": "Stabilizers"}
-SYMPTOMS = ["pressure drop", "perte de pression", "leak", "fuite", "vibration", "overheat", "noise"]
-COMPONENTS = ["landing gear", "actuator", "vérin", "fitting", "pump", "valve", "engine"]
-PHASES = ["retraction", "extension", "takeoff", "landing", "taxi", "climb", "approach"]
+ATA_NAMES = {
+    "32": "Landing gear", "29": "Hydraulic power", "27": "Flight controls",
+    "28": "Fuel", "31": "Instruments", "71": "Power plant", "55": "Stabilizers",
+    "34": "Navigation",
+}
+SYMPTOMS = [
+    "pressure drop", "perte de pression", "leak", "fuite", "vibration", "overheat", "noise",
+    "intermittent", "failure", "fault", "warning", "caution", "abnormal", "erratic", "fluctuation",
+]
+COMPONENTS = [
+    "landing gear", "actuator", "verin", "fitting", "pump", "valve", "engine",
+    "sensor", "display", "hydraulic pump", "fuel pump", "transponder", "adiru",
+]
+PHASES = [
+    "retraction", "extension", "takeoff", "landing", "taxi", "climb", "approach",
+    "cruise", "descent", "rotation", "flare",
+]
 FRENCH_HINTS = re.compile(r"[éèêàùç]|\b(le|la|les|du|des|perte|sur|vols)\b", re.IGNORECASE)
 
 

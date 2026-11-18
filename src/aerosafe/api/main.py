@@ -20,6 +20,8 @@ from aerosafe.audit.chain import AuditLog
 from aerosafe.case_store import CaseStore
 from aerosafe.config import get_settings
 from aerosafe.evaluation import EVAL_CSV, evaluate_ata_baseline
+from aerosafe.sources import MAX_SOURCE_BYTES, SourceStore, parse_source
+from aerosafe import agentic
 from aerosafe.rul import MAX_SENSOR_CSV_BYTES, SensorCsvError, estimate_rul
 
 @asynccontextmanager
@@ -29,11 +31,12 @@ async def lifespan(_: FastAPI):
     AuditLog(settings.audit_path)
     CASE_STORE = CaseStore(settings.cases_path)
     CASE_STORE_PATH = settings.cases_path
+    SourceStore(settings.sources_path)
     yield
 
 
-app = FastAPI(title="AeroSafe Copilot", version="0.1.0",
-              description="Prototype on public data. Not approved maintenance data.", lifespan=lifespan)
+app = FastAPI(title="NeuralMech Investigation Workbench", version="0.2.0",
+              description="Agentic, source-grounded aviation investigation prototype. Not maintenance guidance.", lifespan=lifespan)
 WEB_STATIC = Path(__file__).resolve().parents[1] / "static"
 WEB_INDEX = WEB_STATIC / "index.html"
 app.mount("/static", StaticFiles(directory=WEB_STATIC), name="static")
@@ -84,6 +87,7 @@ class CaseRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str = Field(min_length=1, max_length=10_000)
+    mode: Literal["baseline", "agentic"] = "baseline"
     aircraft_context: AircraftContext = Field(default_factory=AircraftContext)
 
     @field_validator("text")
@@ -113,7 +117,14 @@ class Decision(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    settings = get_settings()
+    return {"status": "ok", "agentic_configured": agentic.available(), "agent_model": settings.agent_model,
+            "source_count": _source_store().count()}
+
+
+def _source_store() -> SourceStore:
+    settings = get_settings()
+    return SourceStore(settings.sources_path)
 
 
 @app.get("/", include_in_schema=False)
@@ -144,7 +155,7 @@ async def transcribe_audio(file: UploadFile):
 
 
 @app.post("/cases")
-def create_case(req: CaseRequest):
+async def create_case(req: CaseRequest):
     case_id = f"case-{uuid.uuid4().hex}"
     result = _graph().invoke({"text": req.text})
     context_fields = req.aircraft_context.model_dump(exclude_none=True)
@@ -161,6 +172,21 @@ def create_case(req: CaseRequest):
         _case_store().save(case_id, result, created_at)
     except (OSError, sqlite3.Error) as exc:
         raise HTTPException(500, "Could not save the case to local storage") from exc
+    if req.mode == "agentic":
+        if not agentic.available():
+            result["agentic"] = {"status": "unavailable", "message": "OPENAI_API_KEY is not configured; baseline result was saved."}
+        else:
+            try:
+                result["agentic"] = await agentic.investigate(req.text, result.get("ata", []), _source_store(), get_settings().agent_model)
+            except Exception as exc:
+                # Store only a broad error class; never persist prompts, response bodies, or credentials.
+                auth_error = type(exc).__name__ == "AuthenticationError"
+                message = ("OpenAI rejected the configured key (401 invalid_api_key). Replace it with a valid API key; local baseline remains available."
+                           if auth_error else "Agent run failed; local keyword baseline remains available.")
+                result["agentic"] = {"status": "failed", "error_type": type(exc).__name__, "message": message}
+            for stage in result["agentic"].get("trace", []):
+                audit.append("agentic", stage["stage"], {"case": case_id, "status": stage["status"]})
+        _case_store().save(case_id, result, created_at)
     return result
 
 
@@ -202,6 +228,47 @@ async def analyze_rul(file: UploadFile, threshold: float = Query(default=0.2)):
         raise HTTPException(422, str(exc)) from exc
 
 
+@app.get("/sources")
+def list_sources():
+    return _source_store().list()
+
+
+@app.post("/sources")
+async def upload_source(file: UploadFile):
+    raw = await file.read(MAX_SOURCE_BYTES + 1)
+    if len(raw) > MAX_SOURCE_BYTES:
+        raise HTTPException(413, "Source file exceeds the 8 MiB limit.")
+    try:
+        content_type, pages = parse_source(file.filename or "source.txt", raw)
+        return _source_store().add(file.filename or "source.txt", content_type, raw, pages)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.delete("/sources/{source_id}")
+def delete_source(source_id: str):
+    if not _source_store().delete(source_id):
+        raise HTTPException(404, "unknown source")
+    return {"deleted": True, "source_id": source_id}
+
+
+@app.get("/cases/{case_id}/similar")
+def similar_cases(case_id: str, limit: int = Query(default=5, ge=1, le=20)):
+    """Find cases with overlapping ATA rankings."""
+    case = _case_store().get(case_id)
+    if case is None:
+        raise HTTPException(404, "unknown case")
+    ata_codes = [code for code, _, _ in case.get("ata", [])]
+    if not ata_codes:
+        return {"case_id": case_id, "similar": [], "note": "No ATA match to compare"}
+    results = []
+    for code in ata_codes[:2]:
+        page = _case_store().list(ata=code, limit=limit + 1)
+        for item in page:
+            if item["case_id"] != case_id and not any(r["case_id"] == item["case_id"] for r in results):
+                results.append(item)
+    return {"case_id": case_id, "similar": results[:limit], "matched_on": ata_codes[:2]}
+
 @app.get("/evaluation")
 def evaluation():
     return evaluate_ata_baseline()
@@ -209,9 +276,11 @@ def evaluation():
 
 @app.get("/evaluation/data", include_in_schema=False)
 def evaluation_data():
-    if not EVAL_CSV.is_file():
+    from aerosafe.evaluation import _find_eval_csv
+    csv_path = EVAL_CSV if EVAL_CSV.is_file() else _find_eval_csv()
+    if not csv_path.is_file():
         raise HTTPException(404, "Evaluation data file is unavailable")
-    return FileResponse(EVAL_CSV, media_type="text/csv", filename="ata_smoke.csv")
+    return FileResponse(csv_path, media_type="text/csv", filename="ata_smoke.csv")
 
 
 @app.post("/cases/{case_id}/decision")

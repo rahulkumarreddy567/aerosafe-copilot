@@ -9,8 +9,8 @@ procedures.
 
 ## Global shell
 
-- The persistent sidebar navigates to Triage, Agent map, Knowledge graph, Parts map, Directives,
-  RUL, Audit log, and Evaluation. The active destination is visually and semantically identified.
+- The persistent sidebar navigates to Cockpit, Agent Mesh, Knowledge Graph, Source Library,
+  RUL Estimator, Audit Chain, and Evaluation. The active destination is visually and semantically identified.
 - The top bar shows the current view, a clear “aircraft context not connected” state, detected
   language, and API health. It must not name an aircraft until a profile is entered and sourced.
 - The global footer and prototype badges remain visible as context that displayed data is not
@@ -49,13 +49,22 @@ procedures.
   affect triage or directive applicability. Results and case rows show supplied details as
   unverified; blank context has an explicit empty state.
 - Reviewer controls appear only for a case in `awaiting_approval`; decisions are logged once.
+- AI investigation is a separate unchecked opt-in. Its label says the defect text and matching local
+  source excerpts are sent to OpenAI. The displayed credential state means “configured,” not
+  provider-validated; failed runs preserve the local baseline and show a clear error.
+
+### Source Library
+
+- Accept only PDF, TXT, and Markdown, with 8 MiB, 120-page PDF, and 250,000 extracted-character limits.
+- Display filename, file hash, page/character/chunk counts, and local creation time. Users can remove
+  an uploaded file and its searchable chunks.
+- Explain that search is lexical and local, OCR/vector search are unavailable, and AI mode sends
+  matching excerpts externally only after explicit opt-in.
 
 ### Agent map
 
-- Show all configured stages in pipeline order: Whisper, Triage, Retrieval, Compliance, Predictive
-  maintenance, Draft, Verifier, and Human approval.
-- Visually distinguish implemented, optional, stub, and held stages. Labels describe implementation
-  state; connected graph nodes must not imply a production implementation.
+- Describe the actual workflow: local keyword triage, optional Investigation Lead, read-only Evidence
+  Scout, exact quote identity check, and a separate reviewer. Do not advertise planned agents as live.
 
 ### Knowledge graph
 
